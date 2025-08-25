@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agente de Automação de VR com Gemini</title>
+    <!-- Inclui o Tailwind CSS para estilização rápida e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 960px;
+        }
+        .btn-primary {
+            transition: transform 0.2s ease-in-out;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #1c64f2;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="container mx-auto bg-white rounded-xl shadow-lg p-8">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Agente de Automação de VR com Gemini</h1>
+        <p class="text-center text-gray-600 mb-6">
+            Bem-vindo ao agente de automação do cálculo de Vale Refeição. Clique no botão abaixo para iniciar o processo de 4 etapas e gerar o relatório com a ajuda do Gemini.
+        </p>
+        
+        <div class="flex justify-center mb-6">
+            <button id="run-automation-btn" class="btn-primary bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300">
+                Iniciar Automação
+            </button>
+        </div>
+
+        <div id="status-container" class="mt-8 space-y-4">
+            <!-- As mensagens de status serão injetadas aqui dinamicamente -->
+        </div>
+
+        <div id="result-container" class="mt-8 hidden">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Relatório Final de Vale Refeição</h2>
+            
+            <div id="gemini-report" class="bg-gray-100 p-6 rounded-lg mb-6">
+                <p class="text-gray-600">
+                    Aguardando a análise do Gemini...
+                </p>
+                <div class="loading-text mt-4">
+                    <div class="spinner mr-2"></div>
+                    <span class="text-sm text-gray-500">Gerando relatório...</span>
+                </div>
+            </div>
+
+            <p class="text-gray-600 mb-4">Abaixo, a tabela detalhada do cálculo para todos os colaboradores elegíveis.</p>
+            <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200">
+                <table id="result-table" class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matrícula</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cargo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sindicato</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dias Úteis</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dias de Férias</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dias VR</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Total VR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-body" class="bg-white divide-y divide-gray-200">
+                        <!-- As linhas do relatório serão injetadas aqui -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Definição dos dados CSV como strings JavaScript
+        const dadosCsv = {
+            'ativos': `MATRICULA,EMPRESA,TITULO DO CARGO,DESC. SITUACAO,Sindicato
+34941,1410,TECH RECRUITER II,Trabalhando,SINDPD SP - SIND.TRAB.EM PROC DADOS E EMPR.EMPRESAS PROC DADOS ESTADO DE SP.
+24401,1410,COORDENADOR ADMINISTRATIVO,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+32104,1410,ANALISTA CONTABIL-FISCAL II,Férias,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+35254,1410,ANALISTA CONTABIL-FISCAL II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+31731,1410,ANALISTA CONTABIL-FISCAL III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+31009,1410,ANALISTA DE CONTROLADORIA I,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+28979,1410,ANALISTA DE CONTROLADORIA II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+24122,1410,ANALISTA DE CONTROLADORIA III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+30556,1410,DESENVOLVEDOR II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+35627,1410,ASSISTENTE DE BPO I,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+34789,1410,ASSISTENTE DE BPO I,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+24505,1410,DESENVOLVEDOR III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+27071,1410,DESENVOLVEDOR III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+24475,1410,ANALISTA DE SISTEMAS E NEGOCIOS II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+26273,1410,ANALISTA DE SISTEMAS E NEGOCIOS II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
+32050,1410,ANALISTA DE SISTEMAS E NEGOCIOS III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL`,
+            'ferias': `MATRICULA,DESC. SITUACAO,DIAS DE FÉRIAS
+32104,Férias,10
+32761,Férias,10
+30567,Férias,10
+30502,Férias,15
+33998,Férias,20
+30867,Férias,10
+31237,Férias,15
+32278,Férias,20
+33808,Férias,5
+26910,Férias,30
+30206,Férias,30
+32216,Férias,30
+30570,Férias,30
+32589,Férias,30
+31740,Férias,30
+33235,Férias,30
+34042,Férias,30
+33420,Férias,5
+31190,Férias,5
+31208,Férias,5
+33715,Férias,5
+30280,Férias,5
+34444,Férias,5
+29058,Férias,15
+33628,Férias,20
+33795,Férias,15
+33633,Férias,20
+26463,Férias,10
+31333,Férias,20`,
+            'afastamentos': `MATRICULA,DESC. SITUACAO,na compra?,
+32572,Licença Maternidade,,
+25961,Licença Maternidade,,
+21151,Auxílio Doença,,
+25857,Auxílio Doença,,
+31326,Licença Maternidade,,
+32930,Licença Maternidade,,
+30515,Licença Maternidade,30515,retorno de férias + licença em 11/06
+34526,Licença Maternidade,34526,retorno de férias + licença em 12/06
+34357,Licença Maternidade,,
+34539,Licença Maternidade,34539,retorno da licença em 04/06
+34330,Auxílio Doença,,
+30264,Licença Maternidade,,
+32345,Licença Maternidade,32345,retorno de férias + licença em 26/05
+30200,Licença Maternidade,,
+34867,Auxílio Doença,,
+34986,Auxílio Doença,,
+34731,Auxílio Doença,,
+34901,Auxílio Doença,,
+33106,Licença Maternidade,33106,retorno da licença em 05/06
+25233,Auxílio Doença,,`,
+            'desligados': `MATRICULA ,DATA DEMISSÃO,COMUNICADO DE DESLIGAMENTO
+34706,2025-05-01,OK
+31486,2025-05-01,OK
+34641,2025-05-01,OK
+26139,2025-05-02,OK
+34179,2025-05-04,OK
+33482,2025-05-04,OK
+33492,2025-05-04,
+33627,2025-05-07,OK
+33404,2025-05-04,OK
+33922,2025-05-08,OK
+25707,2025-05-09,OK
+34935,2025-05-10,OK
+33989,2025-05-11,OK
+29294,2025-05-11,OK
+31394,2025-05-16,OK
+25670,2025-05-15,OK
+34387,2025-05-15,OK
+33711,2025-05-17,OK
+34819,2025-05-16,OK
+35471,2025-05-16,
+32967,2025-05-18,`,
+            'aprendizes': `MATRICULA,TITULO DO CARGO
+34383,APRENDIZ
+34404,APRENDIZ
+35086,APRENDIZ
+34396,APRENDIZ
+34403,APRENDIZ
+35640,APRENDIZ
+34951,APRENDIZ TECH
+34950,APRENDIZ TI
+35088,APRENDIZ
+35635,APRENDIZ
+35081,APRENDIZ
+35641,APRENDIZ
+35637,APRENDIZ
+35639,APRENDIZ
+35642,APRENDIZ
+35636,APRENDIZ
+35607,APRENDIZ AUX  ADMINISTRATIVO
+35366,APRENDIZ
+35643,APRENDIZ
+34392,APRENDIZ
+35085,APRENDIZ
+34398,APRENDIZ
+35089,APRENDIZ
+35644,APRENDIZ
+34394,APRENDIZ
+34953,APRENDIZ TECH
+35058,APRENDIZ
+35638,APRENDIZ
+34952,APRENDIZ
+35571,APRENDIZ
+35609,APRENDIZ AUX  ADMINISTRATIVO
+35610,APRENDIZ AUX  ADMINISTRATIVO
+35608,APRENDIZ AUX  ADMINISTRATIVO`,
+            'estagio': `MATRICULA,TITULO DO CARGO,na compra?
+35591,ESTAGIARIO,#REF!
+35472,ESTAGIARIO,#REF!
+35715,ESTAGIARIO,#REF!
+35719,ESTAGIARIO,#REF!
+35438,ESTAGIARIO,#REF!
+35184,ESTAGIARIO,#REF!
+35186,ESTAGIARIO,#REF!
+35275,ESTAGIARIO,#REF!
+35220,ESTAGIARIO,#REF!
+35133,ESTAGIARIO,#REF!
+35153,ESTAGIARIO,#REF!
+34317,ESTAGIARIO,#REF!
+34319,ESTAGIARIO,#REF!
+34305,ESTAGIARIO,#REF!
+34315,ESTAGIARIO,#REF!
+34346,ESTAGIARIO,#REF!
+34306,ESTAGIARIO,#REF!
+34316,ESTAGIARIO,#REF!
+34349,ESTAGIARIO,#REF!
+34353,ESTAGIARIO,#REF!
+34354,ESTAGIARIO,#REF!
+34625,ESTAGIARIO,#REF!
+35618,ESTAGIARIO,#REF!
+35716,ESTAGIARIO,#REF!
+35087,ESTAGIARIO,#REF!
+35406,ESTAGIARIO,#REF!
+34431,ESTAGIARIO,#REF!
+35616,ESTAGIARIO,#REF!
+35697,ESTAGIARIO,#REF!
+35698,ESTAGIARIO,#REF!
+35592,ESTAGIARIO,#REF!
+35604,ESTAGIARIO,#REF!`,
+            'exterior': `Cadastro,Valor,
+29306,28,desligado
+31227,554.4,RETORNOU DO EXTERIOR - devido o pgto
+32967,660,removido
+34884,554.4,`,
+            'base_dias_uteis': `SINDICADO,DIAS UTEIS 
+SITEPD PR - SIND DOS TRAB EM EMPR PRIVADAS DE PROC DE DADOS DE CURITIBA E REGIAO METROPOLITANA,22
+SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL,21
+SINDPD SP - SIND.TRAB.EM PROC DADOS E EMPR.EMPRESAS PROC DADOS ESTADO DE SP.,22
+SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
+        };
+
+        const VR_DIARIO = 37.5;
+        const MES_COMPETENCIA = '05';
+
+        /**
+         * Converte uma string CSV em um array de objetos.
+         * @param {string} csvString A string com dados no formato CSV.
+         * @returns {Array<Object>} O array de objetos representando o CSV.
+         */
+        function parseCSV(csvString) {
+            const lines = csvString.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const result = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',').map(v => v.trim());
+                if (values.length !== headers.length) continue;
+                const obj = {};
+                for (let j = 0; j < headers.length; j++) {
+                    obj[headers[j]] = values[j];
+                }
+                result.push(obj);
+            }
+            return result;
+        }
+
+        /**
+         * Exibe uma mensagem de status com um spinner.
+         * @param {string} message A mensagem a ser exibida.
+         * @param {string} id O ID do passo para identificação.
+         */
+        function showStatus(message, id) {
+            const statusContainer = document.getElementById('status-container');
+            const stepDiv = document.createElement('div');
+            stepDiv.id = `step-${id}`;
+            stepDiv.className = 'flex items-center space-x-2 p-4 rounded-lg bg-gray-100 text-gray-700';
+            stepDiv.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
+            statusContainer.appendChild(stepDiv);
+        }
+
+        /**
+         * Atualiza uma mensagem de status para sucesso.
+         * @param {string} id O ID do passo.
+         * @param {string} successMessage A mensagem de sucesso.
+         */
+        function showSuccess(id, successMessage) {
+            const stepDiv = document.getElementById(`step-${id}`);
+            if (stepDiv) {
+                stepDiv.className = 'flex items-center space-x-2 p-4 rounded-lg bg-green-100 text-green-700';
+                stepDiv.innerHTML = `<span class="text-xl">✅</span><span>${successMessage}</span>`;
+            }
+        }
+
+        /**
+         * Função que chama a API do Gemini para gerar o relatório final.
+         * @param {string} prompt O texto a ser enviado para o modelo.
+         * @returns {Promise<string>} O texto gerado pelo modelo.
+         */
+        async function generateReportWithGemini(prompt) {
+            const geminiReportDiv = document.getElementById('gemini-report');
+            const loadingHtml = `<div class="loading-text mt-4"><div class="spinner mr-2"></div><span class="text-sm text-gray-500">Gerando relatório...</span></div>`;
+            geminiReportDiv.innerHTML = `<p class="text-gray-600">Aguardando a análise do Gemini...</p>${loadingHtml}`;
+
+            let retryCount = 0;
+            const maxRetries = 5;
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            while (retryCount < maxRetries) {
+                try {
+                    const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429) {
+                        const delay = Math.pow(2, retryCount) * 1000;
+                        console.warn(`API rate limit exceeded. Retrying in ${delay / 1000}s...`);
+                        await new Promise(res => setTimeout(res, delay));
+                        retryCount++;
+                        continue;
+                    }
+
+                    const result = await response.json();
+                    if (result.candidates && result.candidates.length > 0 &&
+                        result.candidates[0].content && result.candidates[0].content.parts &&
+                        result.candidates[0].content.parts.length > 0) {
+                        return result.candidates[0].content.parts[0].text;
+                    } else {
+                        console.error("Estrutura de resposta inesperada da API Gemini:", result);
+                        return "Não foi possível gerar o relatório. Tente novamente.";
+                    }
+                } catch (error) {
+                    console.error("Erro ao chamar a API Gemini:", error);
+                    return "Ocorreu um erro ao gerar o relatório. Tente novamente.";
+                }
+            }
+            return "Falha ao gerar o relatório após várias tentativas devido ao limite de taxa da API.";
+        }
+
+        /**
+         * Função principal que executa a automação completa.
+         */
+        async function runAutomation() {
+            // Esconde resultados anteriores e limpa o status
+            document.getElementById('result-container').classList.add('hidden');
+            document.getElementById('report-body').innerHTML = '';
+            document.getElementById('status-container').innerHTML = '';
+
+            const btn = document.getElementById('run-automation-btn');
+            btn.disabled = true;
+            btn.textContent = 'Processando...';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Passo 1: Consolidação de Dados
+            showStatus('Passo 1: Consolidando dados de colaboradores e férias...', 1);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simula um atraso
+            
+            let dfAtivos = parseCSV(dadosCsv.ativos);
+            const dfFerias = parseCSV(dadosCsv.ferias);
+            
+            // Simula o merge: adiciona os dias de férias aos ativos
+            const feriasMap = new Map(dfFerias.map(item => [item['MATRICULA'], parseInt(item['DIAS DE FÉRIAS'])]));
+            dfAtivos = dfAtivos.map(colaborador => {
+                colaborador['DIAS DE FÉRIAS'] = feriasMap.get(colaborador['MATRICULA']) || 0;
+                colaborador['excluido'] = false;
+                colaborador['motivo_exclusao'] = '';
+                return colaborador;
+            });
+            showSuccess(1, '✅ Passo 1 concluído: Dados consolidados com sucesso.');
+
+            // Passo 2: Tratamento de Exclusões
+            showStatus('Passo 2: Tratando exclusões (aprendizes, estagiários, desligados, afastados)...', 2);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simula um atraso
+
+            const dfAprendizes = parseCSV(dadosCsv.aprendizes);
+            const dfEstagio = parseCSV(dadosCsv.estagio);
+            const excluidosManual = new Set([...dfAprendizes.map(a => a['MATRICULA']), ...dfEstagio.map(e => e['MATRICULA'])]);
+
+            const dfAfastados = parseCSV(dadosCsv.afastamentos);
+            const afastadosIds = new Set(dfAfastados.map(a => a['MATRICULA']));
+
+            const dfDesligados = parseCSV(dadosCsv.desligados);
+            const desligadosMesAnterior = new Set(dfDesligados.filter(item => {
+                const dataDemissao = new Date(item['DATA DEMISSÃO']);
+                return dataDemissao.getMonth() + 1 === parseInt(MES_COMPETENCIA) && dataDemissao.getDate() <= 15;
+            }).map(d => d['MATRICULA '].trim()));
+
+            const dfExterior = parseCSV(dadosCsv.exterior);
+            const exteriorIds = new Set(dfExterior.map(e => e['Cadastro']));
+
+            let totalExcluidos = 0;
+            const dfConsolidado = dfAtivos.map(colaborador => {
+                if (excluidosManual.has(colaborador['MATRICULA'])) {
+                    colaborador.excluido = true;
+                    colaborador.motivo_exclusao = 'Aprendiz ou Estagiário';
+                    totalExcluidos++;
+                } else if (afastadosIds.has(colaborador['MATRICULA'])) {
+                    colaborador.excluido = true;
+                    colaborador.motivo_exclusao = 'Afastamento';
+                    totalExcluidos++;
+                } else if (desligadosMesAnterior.has(colaborador['MATRICULA'])) {
+                    colaborador.excluido = true;
+                    colaborador.motivo_exclusao = 'Desligado até o dia 15';
+                    totalExcluidos++;
+                } else if (exteriorIds.has(colaborador['MATRICULA'])) {
+                    colaborador.excluido = true;
+                    colaborador.motivo_exclusao = 'No Exterior';
+                    totalExcluidos++;
+                }
+                return colaborador;
+            });
+
+            showSuccess(2, `✅ Passo 2 concluído: ${totalExcluidos} colaboradores excluídos com sucesso.`);
+
+            // Passo 3: Cálculo do Benefício
+            showStatus('Passo 3: Calculando o valor do benefício para os elegíveis...', 3);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simula um atraso
+
+            const dfDiasUteis = parseCSV(dadosCsv.base_dias_uteis);
+            const diasUteisMap = new Map(dfDiasUteis.map(item => [item['SINDICADO'].trim(), parseInt(item['DIAS UTEIS '])]));
+
+            const dfElegiveis = dfConsolidado.filter(c => !c.excluido);
+            
+            let totalElegiveis = 0;
+            let totalVr = 0;
+            
+            const relatorioFinal = dfElegiveis.map(colaborador => {
+                totalElegiveis++;
+                const diasUteisBase = diasUteisMap.get(colaborador['Sindicato']) || 22;
+                const diasVr = Math.max(0, diasUteisBase - colaborador['DIAS DE FÉRIAS']);
+                const valorTotalVr = diasVr * VR_DIARIO;
+                totalVr += valorTotalVr;
+
+                return {
+                    'Matrícula': colaborador['MATRICULA'],
+                    'Cargo': colaborador['TITULO DO CARGO'],
+                    'Sindicato': colaborador['Sindicato'],
+                    'Dias Úteis': diasUteisBase,
+                    'Dias de Férias': colaborador['DIAS DE FÉRIAS'],
+                    'Dias VR': diasVr,
+                    'Valor Total VR': `R$ ${valorTotalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}`
+                };
+            });
+            showSuccess(3, `✅ Passo 3 concluído: ${totalElegiveis} colaboradores elegíveis. Valor total de VR: R$ ${totalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}`);
+
+            // Passo 4: Geração do Relatório Final
+            showStatus('Passo 4: Gerando o relatório final com o Gemini...', 4);
+
+            // Geração da tabela detalhada
+            const reportBody = document.getElementById('report-body');
+            relatorioFinal.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-100';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Matrícula']}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Cargo']}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Sindicato']}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Dias Úteis']}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Dias de Férias']}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Dias VR']}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row['Valor Total VR']}</td>
+                `;
+                reportBody.appendChild(tr);
+            });
+
+            // Criação do prompt para o Gemini
+            const relatorioTexto = JSON.stringify(relatorioFinal, null, 2);
+            const prompt = `
+            Com base nos seguintes dados processados, gere um resumo profissional e conciso para um relatório de Vale Refeição. Inclua o valor total do VR, o número de colaboradores elegíveis, e qualquer insight relevante sobre os dados.
+            
+            Dados de entrada:
+            - Valor total a ser pago em VR: R$ ${totalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}
+            - Total de colaboradores elegíveis: ${totalElegiveis}
+            - Colaboradores excluídos: ${totalExcluidos}
+            
+            O relatório deve ser formal, amigável e focado nos resultados principais. Não precisa ser muito longo, apenas um resumo direto e relevante para o gestor de RH.
+            `;
+
+            const geminiReport = await generateReportWithGemini(prompt);
+            document.getElementById('gemini-report').innerHTML = `
+                <p class="text-gray-800">${geminiReport}</p>
+            `;
+
+            document.getElementById('result-container').classList.remove('hidden');
+            showSuccess(4, '✅ Processo finalizado com sucesso! Relatório gerado com Gemini.');
+
+            btn.disabled = false;
+            btn.textContent = 'Iniciar Automação';
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // Adiciona o event listener ao botão
+        document.getElementById('run-automation-btn').addEventListener('click', runAutomation);
+    </script>
+
+</body>
+</html>
