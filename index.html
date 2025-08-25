@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agente de Automação de VR Interativo</title>
+    <title>Agente de Automação de VR com Gemini</title>
     <!-- Inclui o Tailwind CSS para estilização rápida e responsiva -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -14,11 +14,15 @@
         .container {
             max-width: 960px;
         }
-        .btn-primary {
-            transition: transform 0.2s ease-in-out;
+        .btn {
+            transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
         }
-        .btn-primary:hover {
+        .btn:hover:not(:disabled) {
             transform: translateY(-2px);
+        }
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
         }
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
@@ -37,28 +41,39 @@
             justify-content: center;
             font-weight: 600;
         }
+        .step-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
     </style>
 </head>
 <body class="p-6">
 
     <div class="container mx-auto bg-white rounded-xl shadow-lg p-8">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Agente de Automação de VR Interativo</h1>
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Agente de Automação de VR com Gemini</h1>
         <p class="text-center text-gray-600 mb-6">
-            Bem-vindo ao agente de automação do cálculo de Vale Refeição. Avance passo a passo para gerar o relatório completo.
+            Bem-vindo ao agente de automação do cálculo de Vale Refeição. Siga os passos abaixo para gerar o relatório com a ajuda do Gemini.
         </p>
-        
-        <div id="step-controls" class="flex justify-center mb-6">
-            <button id="next-step-btn" class="btn-primary bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300">
-                Iniciar Automação
+
+        <!-- Controles de Automação Passo a Passo -->
+        <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4 mb-8">
+            <button id="step-1-btn" class="btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg">
+                1. Consolidar Dados
+            </button>
+            <button id="step-2-btn" class="btn bg-gray-400 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
+                2. Tratar Exclusões
+            </button>
+            <button id="step-3-btn" class="btn bg-gray-400 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
+                3. Calcular Benefício
+            </button>
+            <button id="step-4-btn" class="btn bg-gray-400 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
+                4. Gerar Relatório
             </button>
         </div>
-
+        
         <div id="status-container" class="mt-8 space-y-4">
-            <!-- As mensagens de status serão injetadas aqui dinamicamente -->
-        </div>
-
-        <div id="step-results" class="mt-8 space-y-8">
-            <!-- Os resultados de cada passo serão exibidos aqui -->
+            <!-- As mensagens de status e pré-visualizações serão injetadas aqui dinamicamente -->
         </div>
 
     </div>
@@ -191,38 +206,38 @@
 35610,APRENDIZ AUX  ADMINISTRATIVO
 35608,APRENDIZ AUX  ADMINISTRATIVO`,
             'estagio': `MATRICULA,TITULO DO CARGO,na compra?
-35591,ESTAGIARIO,
-35472,ESTAGIARIO,
-35715,ESTAGIARIO,
-35719,ESTAGIARIO,
-35438,ESTAGIARIO,
-35184,ESTAGIARIO,
-35186,ESTAGIARIO,
-35275,ESTAGIARIO,
-35220,ESTAGIARIO,
-35133,ESTAGIARIO,
-35153,ESTAGIARIO,
-34317,ESTAGIARIO,
-34319,ESTAGIARIO,
-34305,ESTAGIARIO,
-34315,ESTAGIARIO,
-34346,ESTAGIARIO,
-34306,ESTAGIARIO,
-34316,ESTAGIARIO,
-34349,ESTAGIARIO,
-34353,ESTAGIARIO,
-34354,ESTAGIARIO,
-34625,ESTAGIARIO,
-35618,ESTAGIARIO,
-35716,ESTAGIARIO,
-35087,ESTAGIARIO,
-35406,ESTAGIARIO,
-34431,ESTAGIARIO,
-35616,ESTAGIARIO,
-35697,ESTAGIARIO,
-35698,ESTAGIARIO,
-35592,ESTAGIARIO,
-35604,ESTAGIARIO,`,
+35591,ESTAGIARIO,#REF!
+35472,ESTAGIARIO,#REF!
+35715,ESTAGIARIO,#REF!
+35719,ESTAGIARIO,#REF!
+35438,ESTAGIARIO,#REF!
+35184,ESTAGIARIO,#REF!
+35186,ESTAGIARIO,#REF!
+35275,ESTAGIARIO,#REF!
+35220,ESTAGIARIO,#REF!
+35133,ESTAGIARIO,#REF!
+35153,ESTAGIARIO,#REF!
+34317,ESTAGIARIO,#REF!
+34319,ESTAGIARIO,#REF!
+34305,ESTAGIARIO,#REF!
+34315,ESTAGIARIO,#REF!
+34346,ESTAGIARIO,#REF!
+34306,ESTAGIARIO,#REF!
+34316,ESTAGIARIO,#REF!
+34349,ESTAGIARIO,#REF!
+34353,ESTAGIARIO,#REF!
+34354,ESTAGIARIO,#REF!
+34625,ESTAGIARIO,#REF!
+35618,ESTAGIARIO,#REF!
+35716,ESTAGIARIO,#REF!
+35087,ESTAGIARIO,#REF!
+35406,ESTAGIARIO,#REF!
+34431,ESTAGIARIO,#REF!
+35616,ESTAGIARIO,#REF!
+35697,ESTAGIARIO,#REF!
+35698,ESTAGIARIO,#REF!
+35592,ESTAGIARIO,#REF!
+35604,ESTAGIARIO,#REF!`,
             'exterior': `Cadastro,Valor,
 29306,28,desligado
 31227,554.4,RETORNOU DO EXTERIOR - devido o pgto
@@ -238,26 +253,22 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
         const VR_DIARIO = 37.5;
         const MES_COMPETENCIA = '05';
 
-        // Variáveis globais para armazenar os dados entre os passos
+        // Variáveis de estado global para compartilhar dados entre os passos
         let dfConsolidado = [];
         let dfElegiveis = [];
-        let totalExcluidos = 0;
-        let totalVr = 0;
 
         /**
          * Converte uma string CSV em um array de objetos.
-         * Substitui "#REF!" por uma string vazia para limpar os dados.
          * @param {string} csvString A string com dados no formato CSV.
          * @returns {Array<Object>} O array de objetos representando o CSV.
          */
         function parseCSV(csvString) {
             const lines = csvString.trim().split('\n');
+            if (lines.length <= 1) return [];
             const headers = lines[0].split(',').map(h => h.trim());
             const result = [];
             for (let i = 1; i < lines.length; i++) {
-                const rawValues = lines[i].split(',');
-                // A linha abaixo já limpa os valores, mas a fonte de dados na string já foi corrigida agora.
-                const values = rawValues.map(v => v.trim().replace(/#REF!/g, ''));
+                const values = lines[i].split(',').map(v => v.trim());
                 if (values.length !== headers.length) continue;
                 const obj = {};
                 for (let j = 0; j < headers.length; j++) {
@@ -275,7 +286,6 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
          */
         function showStatus(message, id) {
             const statusContainer = document.getElementById('status-container');
-            statusContainer.innerHTML = ''; // Limpa os status anteriores
             const stepDiv = document.createElement('div');
             stepDiv.id = `step-${id}`;
             stepDiv.className = 'flex items-center space-x-2 p-4 rounded-lg bg-gray-100 text-gray-700';
@@ -284,40 +294,63 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
         }
 
         /**
-         * Atualiza uma mensagem de status para sucesso.
-         * @param {string} id O ID do passo.
-         * @param {string} successMessage A mensagem de sucesso.
+         * Exibe um preview em uma tabela.
+         * @param {string} title Título da tabela.
+         * @param {Array<Object>} data Os dados a serem exibidos.
+         * @param {Array<string>} headers Os cabeçalhos da tabela.
+         * @param {string} containerId O ID do contêiner onde a tabela será inserida.
          */
-        function showSuccess(id, successMessage) {
-            const stepDiv = document.getElementById(`step-${id}`);
-            if (stepDiv) {
-                stepDiv.className = 'flex items-center space-x-2 p-4 rounded-lg bg-green-100 text-green-700';
-                stepDiv.innerHTML = `<span class="text-xl">✅</span><span>${successMessage}</span>`;
-            }
+        function showTablePreview(title, data, headers, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">${title}</h2>
+                <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                ${headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${h}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${data.map(row => `
+                                <tr>
+                                    ${Object.values(row).map(val => `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${val}</td>`).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            container.classList.remove('hidden');
         }
 
         /**
-         * Renderiza um resultado na tela.
-         * @param {string} title Título do resultado.
-         * @param {string} content Conteúdo HTML a ser injetado.
+         * Exibe um preview em uma lista.
+         * @param {string} title Título da lista.
+         * @param {Array<Object>} data Os dados a serem exibidos.
+         * @param {string} containerId O ID do contêiner onde a lista será inserida.
          */
-        function renderResult(title, content) {
-            const resultsContainer = document.getElementById('step-results');
-            const resultDiv = document.createElement('div');
-            resultDiv.className = 'bg-gray-100 p-6 rounded-lg shadow';
-            resultDiv.innerHTML = `
-                <h3 class="text-lg font-semibold text-gray-800 mb-2">${title}</h3>
-                <div class="overflow-x-auto">${content}</div>
+        function showListPreview(title, data, containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">${title}</h2>
+                <ul class="list-disc list-inside bg-gray-100 p-4 rounded-lg space-y-2">
+                    ${data.map(item => `<li class="text-sm text-gray-700">${item.Matrícula}: ${item.Motivo}</li>`).join('')}
+                </ul>
             `;
-            resultsContainer.appendChild(resultDiv);
+            container.classList.remove('hidden');
         }
-
+        
         /**
          * Função que chama a API do Gemini para gerar o relatório final.
          * @param {string} prompt O texto a ser enviado para o modelo.
          * @returns {Promise<string>} O texto gerado pelo modelo.
          */
         async function generateReportWithGemini(prompt) {
+            const geminiReportDiv = document.getElementById('gemini-report');
+            const loadingHtml = `<div class="loading-text mt-4"><div class="spinner mr-2"></div><span class="text-sm text-gray-500">Gerando relatório...</span></div>`;
+            geminiReportDiv.innerHTML = `<p class="text-gray-600">Aguardando a análise do Gemini...</p>${loadingHtml}`;
+
             let retryCount = 0;
             const maxRetries = 5;
             const apiKey = "";
@@ -334,6 +367,7 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
 
                     if (response.status === 429) {
                         const delay = Math.pow(2, retryCount) * 1000;
+                        console.warn(`API rate limit exceeded. Retrying in ${delay / 1000}s...`);
                         await new Promise(res => setTimeout(res, delay));
                         retryCount++;
                         continue;
@@ -355,16 +389,32 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             }
             return "Falha ao gerar o relatório após várias tentativas devido ao limite de taxa da API.";
         }
-        
-        // Funções para cada passo da automação
-        async function runStep1() {
-            const btn = document.getElementById('next-step-btn');
-            btn.disabled = true;
-            btn.textContent = 'Processando...';
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
 
+        /**
+         * Limpa o estado e a UI para um novo processo.
+         */
+        function resetState() {
+            dfConsolidado = [];
+            dfElegiveis = [];
+            document.getElementById('status-container').innerHTML = '';
+            document.getElementById('step-1-btn').disabled = false;
+            document.getElementById('step-2-btn').disabled = true;
+            document.getElementById('step-3-btn').disabled = true;
+            document.getElementById('step-4-btn').disabled = true;
+            document.getElementById('step-1-btn').classList.remove('bg-gray-400');
+            document.getElementById('step-1-btn').classList.add('bg-blue-600');
+        }
+
+        // ======================= FUNÇÕES DE CADA PASSO =======================
+
+        async function step1_consolidate_data() {
+            resetState();
+            
+            const btn = document.getElementById('step-1-btn');
+            btn.textContent = 'Processando...';
+            
             showStatus('Passo 1: Consolidando dados de colaboradores e férias...', 1);
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             let dfAtivos = parseCSV(dadosCsv.ativos);
             const dfFerias = parseCSV(dadosCsv.ferias);
@@ -376,99 +426,107 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
                 colaborador['motivo_exclusao'] = '';
                 return colaborador;
             });
+            
+            const previewData = dfConsolidado.map(c => ({
+                'Matrícula': c['MATRICULA'],
+                'Cargo': c['TITULO DO CARGO'],
+                'Sindicato': c['Sindicato'],
+                'Dias de Férias': c['DIAS DE FÉRIAS']
+            }));
+            const previewHeaders = ['Matrícula', 'Cargo', 'Sindicato', 'Dias de Férias'];
+            
+            showTablePreview('Pré-visualização dos Dados Consolidados', previewData, previewHeaders, 'status-container');
 
-            showSuccess(1, '✅ Passo 1 concluído: Dados consolidados com sucesso.');
-
-            let htmlContent = '<ul class="list-disc list-inside text-gray-700">';
-            dfConsolidado.slice(0, 5).forEach(c => {
-                htmlContent += `<li>Matrícula: ${c['MATRICULA']}, Sindicato: ${c['Sindicato']}, Férias: ${c['DIAS DE FÉRIAS']} dias</li>`;
-            });
-            htmlContent += '...e mais colaboradores.</ul>';
-
-            renderResult('Resultado do Passo 1: Dados Consolidados (Amostra)', htmlContent);
-
-            btn.disabled = false;
-            btn.textContent = 'Próximo Passo (Tratar Exclusões)';
+            btn.textContent = '✅ Concluído';
+            btn.classList.remove('bg-blue-600');
+            btn.classList.add('bg-green-600');
+            btn.disabled = true;
+            
+            const nextBtn = document.getElementById('step-2-btn');
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('bg-gray-400');
+            nextBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
         }
 
-        async function runStep2() {
-            const btn = document.getElementById('next-step-btn');
-            btn.disabled = true;
+        async function step2_handle_exclusions() {
+            const btn = document.getElementById('step-2-btn');
             btn.textContent = 'Processando...';
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('step-results').innerHTML = ''; // Limpa resultados anteriores
-
-            showStatus('Passo 2: Tratando exclusões (aprendizes, estagiários, desligados, afastados)...', 2);
+            btn.disabled = true;
             
+            showStatus('Passo 2: Tratando exclusões (aprendizes, estagiários, desligados, afastados)...', '2-status');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             const dfAprendizes = parseCSV(dadosCsv.aprendizes);
             const dfEstagio = parseCSV(dadosCsv.estagio);
             const excluidosManual = new Set([...dfAprendizes.map(a => a['MATRICULA']), ...dfEstagio.map(e => e['MATRICULA'])]);
+
             const dfAfastados = parseCSV(dadosCsv.afastamentos);
             const afastadosIds = new Set(dfAfastados.map(a => a['MATRICULA']));
+
             const dfDesligados = parseCSV(dadosCsv.desligados);
             const desligadosMesAnterior = new Set(dfDesligados.filter(item => {
                 const dataDemissao = new Date(item['DATA DEMISSÃO']);
                 return dataDemissao.getMonth() + 1 === parseInt(MES_COMPETENCIA) && dataDemissao.getDate() <= 15;
             }).map(d => d['MATRICULA '].trim()));
+
             const dfExterior = parseCSV(dadosCsv.exterior);
             const exteriorIds = new Set(dfExterior.map(e => e['Cadastro']));
 
-            let excluidosList = [];
-            dfConsolidado = dfConsolidado.map(colaborador => {
+            let totalExcluidos = 0;
+            const listaExcluidos = [];
+            dfConsolidado.forEach(colaborador => {
                 if (excluidosManual.has(colaborador['MATRICULA'])) {
                     colaborador.excluido = true;
                     colaborador.motivo_exclusao = 'Aprendiz ou Estagiário';
-                    excluidosList.push(colaborador);
+                    totalExcluidos++;
+                    listaExcluidos.push({Matrícula: colaborador['MATRICULA'], Motivo: 'Aprendiz ou Estagiário'});
                 } else if (afastadosIds.has(colaborador['MATRICULA'])) {
                     colaborador.excluido = true;
                     colaborador.motivo_exclusao = 'Afastamento';
-                    excluidosList.push(colaborador);
+                    totalExcluidos++;
+                    listaExcluidos.push({Matrícula: colaborador['MATRICULA'], Motivo: 'Afastamento'});
                 } else if (desligadosMesAnterior.has(colaborador['MATRICULA'])) {
                     colaborador.excluido = true;
                     colaborador.motivo_exclusao = 'Desligado até o dia 15';
-                    excluidosList.push(colaborador);
+                    totalExcluidos++;
+                    listaExcluidos.push({Matrícula: colaborador['MATRICULA'], Motivo: 'Desligado'});
                 } else if (exteriorIds.has(colaborador['MATRICULA'])) {
                     colaborador.excluido = true;
                     colaborador.motivo_exclusao = 'No Exterior';
-                    excluidosList.push(colaborador);
+                    totalExcluidos++;
+                    listaExcluidos.push({Matrícula: colaborador['MATRICULA'], Motivo: 'No Exterior'});
                 }
-                return colaborador;
             });
-            totalExcluidos = excluidosList.length;
-
-            showSuccess(2, `✅ Passo 2 concluído: ${totalExcluidos} colaboradores excluídos com sucesso.`);
-
-            let htmlContent = '<ul class="list-disc list-inside text-gray-700">';
-            excluidosList.slice(0, 5).forEach(c => {
-                htmlContent += `<li>Matrícula: ${c['MATRICULA']}, Motivo: ${c['motivo_exclusao']}</li>`;
-            });
-            htmlContent += '...e mais excluídos.</ul>';
-
-            renderResult('Resultado do Passo 2: Colaboradores Excluídos (Amostra)', htmlContent);
             
-            btn.disabled = false;
-            btn.textContent = 'Próximo Passo (Calcular Benefício)';
+            showListPreview(`Pré-visualização de ${totalExcluidos} Colaboradores Excluídos`, listaExcluidos, 'status-container');
+
+            btn.textContent = '✅ Concluído';
+            btn.classList.remove('bg-blue-600');
+            btn.classList.add('bg-green-600');
+            
+            const nextBtn = document.getElementById('step-3-btn');
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('bg-gray-400');
+            nextBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
         }
 
-        async function runStep3() {
-            const btn = document.getElementById('next-step-btn');
-            btn.disabled = true;
+        async function step3_calculate_benefits() {
+            const btn = document.getElementById('step-3-btn');
             btn.textContent = 'Processando...';
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('step-results').innerHTML = '';
+            btn.disabled = true;
 
-            showStatus('Passo 3: Calculando o valor do benefício para os elegíveis...', 3);
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            showStatus('Passo 3: Calculando o valor do benefício para os elegíveis...', '3-status');
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             const dfDiasUteis = parseCSV(dadosCsv.base_dias_uteis);
             const diasUteisMap = new Map(dfDiasUteis.map(item => [item['SINDICADO'].trim(), parseInt(item['DIAS UTEIS '])]));
-            
+
             dfElegiveis = dfConsolidado.filter(c => !c.excluido);
             
             let totalElegiveis = 0;
-            totalVr = 0;
+            let totalVr = 0;
             
-            const relatorioParcial = dfElegiveis.map(colaborador => {
+            const relatorioCalculo = dfElegiveis.map(colaborador => {
                 totalElegiveis++;
                 const diasUteisBase = diasUteisMap.get(colaborador['Sindicato']) || 22;
                 const diasVr = Math.max(0, diasUteisBase - colaborador['DIAS DE FÉRIAS']);
@@ -477,7 +535,6 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
 
                 return {
                     'Matrícula': colaborador['MATRICULA'],
-                    'Cargo': colaborador['TITULO DO CARGO'],
                     'Sindicato': colaborador['Sindicato'],
                     'Dias Úteis': diasUteisBase,
                     'Dias de Férias': colaborador['DIAS DE FÉRIAS'],
@@ -486,28 +543,66 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
                 };
             });
 
-            showSuccess(3, `✅ Passo 3 concluído: ${totalElegiveis} colaboradores elegíveis.`);
-            
-            const htmlContent = `<p class="text-gray-700">O valor total de VR para os colaboradores elegíveis é de <strong class="text-green-600">R$ ${totalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}</strong>.</p>`;
-            renderResult('Resultado do Passo 3: Cálculo do Benefício', htmlContent);
+            const previewHeaders = ['Matrícula', 'Sindicato', 'Dias Úteis', 'Dias de Férias', 'Dias VR', 'Valor Total VR'];
+            showTablePreview('Pré-visualização do Cálculo de VR', relatorioCalculo, previewHeaders, 'status-container');
 
-            btn.disabled = false;
-            btn.textContent = 'Próximo Passo (Gerar Relatório Final com Gemini)';
+            btn.textContent = '✅ Concluído';
+            btn.classList.remove('bg-blue-600');
+            btn.classList.add('bg-green-600');
+            
+            const nextBtn = document.getElementById('step-4-btn');
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('bg-gray-400');
+            nextBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
         }
 
-        async function runStep4() {
-            const btn = document.getElementById('next-step-btn');
-            btn.disabled = true;
+        async function step4_generate_report() {
+            const btn = document.getElementById('step-4-btn');
             btn.textContent = 'Processando...';
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            document.getElementById('step-results').innerHTML = '';
+            btn.disabled = true;
 
-            showStatus('Passo 4: Gerando o relatório final com o Gemini...', 4);
+            const totalElegiveis = dfElegiveis.length;
+            const totalVr = dfElegiveis.reduce((acc, c) => {
+                const diasUteisBase = (parseCSV(dadosCsv.base_dias_uteis).find(d => d['SINDICADO'].trim() === c['Sindicato']) || { 'DIAS UTEIS ': 22 })['DIAS UTEIS '];
+                const diasVr = Math.max(0, diasUteisBase - c['DIAS DE FÉRIAS']);
+                return acc + (diasVr * VR_DIARIO);
+            }, 0);
+            const totalExcluidos = dfConsolidado.length - totalElegiveis;
+
+            const prompt = `
+            Com base nos seguintes dados processados, gere um resumo profissional e conciso para um relatório de Vale Refeição. Inclua o valor total do VR, o número de colaboradores elegíveis, e qualquer insight relevante sobre os dados.
+            
+            Dados de entrada:
+            - Valor total a ser pago em VR: R$ ${totalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}
+            - Total de colaboradores elegíveis: ${totalElegiveis}
+            - Colaboradores excluídos: ${totalExcluidos}
+            
+            O relatório deve ser formal, amigável e focado nos resultados principais. Não precisa ser muito longo, apenas um resumo direto e relevante para o gestor de RH.
+            `;
+            
+            const resultContainer = document.createElement('div');
+            resultContainer.id = 'result-container';
+            resultContainer.className = 'mt-8';
+            resultContainer.innerHTML = `
+                <h2 class="text-xl font-semibold text-gray-800 mb-4">Relatório Final de Vale Refeição</h2>
+                <div id="gemini-report" class="bg-gray-100 p-6 rounded-lg mb-6">
+                    <p class="text-gray-600">Aguardando a análise do Gemini...</p>
+                    <div class="loading-text mt-4">
+                        <div class="spinner mr-2"></div>
+                        <span class="text-sm text-gray-500">Gerando relatório...</span>
+                    </div>
+                </div>
+            `;
+            document.getElementById('status-container').appendChild(resultContainer);
+            
+            const geminiReport = await generateReportWithGemini(prompt);
+            document.getElementById('gemini-report').innerHTML = `<p class="text-gray-800">${geminiReport}</p>`;
             
             const relatorioFinal = dfElegiveis.map(colaborador => {
-                const diasUteisBase = new Map(parseCSV(dadosCsv.base_dias_uteis).map(item => [item['SINDICADO'].trim(), parseInt(item['DIAS UTEIS '])])).get(colaborador['Sindicato']) || 22;
+                const diasUteisBase = (parseCSV(dadosCsv.base_dias_uteis).find(d => d['SINDICADO'].trim() === colaborador['Sindicato']) || { 'DIAS UTEIS ': 22 })['DIAS UTEIS '];
                 const diasVr = Math.max(0, diasUteisBase - colaborador['DIAS DE FÉRIAS']);
                 const valorTotalVr = diasVr * VR_DIARIO;
+
                 return {
                     'Matrícula': colaborador['MATRICULA'],
                     'Cargo': colaborador['TITULO DO CARGO'],
@@ -519,72 +614,21 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
                 };
             });
 
-            // Criação do prompt para o Gemini
-            const prompt = `
-            Com base nos seguintes dados processados, gere um resumo profissional e conciso para um relatório de Vale Refeição. Inclua o valor total do VR, o número de colaboradores elegíveis, e qualquer insight relevante sobre os dados.
-            
-            Dados de entrada:
-            - Valor total a ser pago em VR: R$ ${totalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}
-            - Total de colaboradores elegíveis: ${dfElegiveis.length}
-            - Colaboradores excluídos: ${totalExcluidos}
-            
-            O relatório deve ser formal, amigável e focado nos resultados principais. Não precisa ser muito longo, apenas um resumo direto e relevante para o gestor de RH.
-            `;
-            
-            const geminiReport = await generateReportWithGemini(prompt);
+            const previewHeaders = ['Matrícula', 'Cargo', 'Sindicato', 'Dias Úteis', 'Dias de Férias', 'Dias VR', 'Valor Total VR'];
+            showTablePreview('Tabela Detalhada do Cálculo', relatorioFinal, previewHeaders, 'status-container');
 
-            const geminiReportHtml = `
-                <div id="gemini-report" class="bg-white p-6 rounded-lg mb-6">
-                    <p class="text-gray-800">${geminiReport}</p>
-                </div>
-            `;
-            const tableHtml = `
-                <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200">
-                    <table id="result-table" class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matrícula</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cargo</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sindicato</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dias VR</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Total VR</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            ${relatorioFinal.map(row => `
-                                <tr class="hover:bg-gray-100">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Matrícula']}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Cargo']}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Sindicato']}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['Dias VR']}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${row['Valor Total VR']}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            renderResult('Relatório Final Gerado com Gemini', geminiReportHtml + tableHtml);
-            showSuccess(4, '✅ Processo finalizado com sucesso! Relatório gerado com Gemini.');
 
-            btn.disabled = true;
-            btn.textContent = 'Automação Concluída';
-            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-            btn.classList.add('bg-gray-400', 'cursor-not-allowed');
+            btn.textContent = '✅ Concluído';
+            btn.classList.remove('bg-blue-600');
+            btn.classList.add('bg-green-600');
         }
 
-        // Controlador de fluxo dos passos
-        let currentStep = 0;
-        const steps = [runStep1, runStep2, runStep3, runStep4];
-        
-        document.getElementById('next-step-btn').addEventListener('click', () => {
-            if (currentStep < steps.length) {
-                steps[currentStep]();
-                currentStep++;
-            }
-        });
 
+        // ======================= EVENT LISTENERS =======================
+        document.getElementById('step-1-btn').addEventListener('click', step1_consolidate_data);
+        document.getElementById('step-2-btn').addEventListener('click', step2_handle_exclusions);
+        document.getElementById('step-3-btn').addEventListener('click', step3_calculate_benefits);
+        document.getElementById('step-4-btn').addEventListener('click', step4_generate_report);
     </script>
 
 </body>
