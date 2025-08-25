@@ -3,629 +3,436 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agente de Automação de VR com Gemini</title>
-    <!-- Inclui o Tailwind CSS para estilização rápida e responsiva -->
+    <title>Automação de VR - Completa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
         }
         .container {
-            max-width: 960px;
+            width: 100%;
+            max-width: 1200px;
+            background-color: #fff;
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        .progress-bar {
+            height: 28px;
+            background-color: #e5e7eb;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            margin-top: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .progress-fill {
+            height: 100%;
+            transition: width 0.4s ease-in-out;
+            border-radius: 0.5rem;
+            background-color: #10b981;
+        }
+        #log-area {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            min-height: 150px;
+            max-height: 300px;
+            text-align: left;
+            margin-top: 1.5rem;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
         }
         .btn {
-            transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
-        }
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-        }
-        .btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.5;
-        }
-        .spinner {
-            border: 4px solid rgba(0, 0, 0, 0.1);
-            border-left-color: #1c64f2;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .loading-text {
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            color: white;
+            border-radius: 0.5rem;
             font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        .step-container {
+        .btn-run { background-color: #4f46e5; }
+        .btn-run:hover:not(:disabled) { background-color: #4338ca; transform: translateY(-1px); }
+        .btn-run:disabled { background-color: #a5b4fc; cursor: not-allowed; }
+        .btn-download { background-color: #10b981; }
+        .btn-download:hover:not(:disabled) { background-color: #059669; transform: translateY(-1px); }
+        .btn-download:disabled { background-color: #6ee7b7; cursor: not-allowed; }
+        .preview-section {
+            display: none;
+            margin-top: 2rem;
+            text-align: left;
             border: 1px solid #e5e7eb;
-            border-radius: 0.75rem;
             padding: 1.5rem;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .preview-table th, .preview-table td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .preview-table th {
+            background-color: #e5e7eb;
+            font-weight: 600;
         }
     </style>
 </head>
-<body class="p-6">
+<body class="bg-gray-100 flex items-center justify-center p-4 min-h-screen">
+    <div class="container">
+        <h1 class="text-3xl font-bold mb-4 text-gray-800">Automação de Vale-Refeição</h1>
+        <p class="text-gray-600 mb-6">Processamento completo de todas as planilhas para gerar o relatório final.</p>
 
-    <div class="container mx-auto bg-white rounded-xl shadow-lg p-8">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Agente de Automação de VR com Gemini</h1>
-        <p class="text-center text-gray-600 mb-6">
-            Bem-vindo ao agente de automação do cálculo de Vale Refeição. A execução do primeiro passo já começou. Siga os botões abaixo para continuar.
-        </p>
+        <button id="start-process-btn" class="btn btn-run">Processar Todos os Dados</button>
 
-        <!-- Controles de Automação Passo a Passo -->
-        <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4 mb-8">
-            <button id="step-1-btn" class="btn bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
-                1. Consolidar Dados
-            </button>
-            <button id="step-2-btn" class="btn bg-gray-400 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
-                2. Tratar Exclusões
-            </button>
-            <button id="step-3-btn" class="btn bg-gray-400 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
-                3. Calcular Benefício
-            </button>
-            <button id="step-4-btn" class="btn bg-gray-400 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
-                4. Gerar Relatório
-            </button>
+        <div id="progress-container" class="hidden">
+            <h2 class="text-xl font-semibold text-gray-700">Progresso do Processamento</h2>
+            <div class="progress-bar">
+                <div id="overall-progress-fill" class="progress-fill"></div>
+            </div>
+            <p class="text-sm text-gray-500"><span id="overall-progress-text">0%</span></p>
+        </div>
+
+        <div id="final-buttons" class="hidden flex justify-center gap-4 mt-8">
+            <button id="download-csv-btn" class="btn btn-download">Baixar Relatório CSV</button>
+            <button id="download-pdf-btn" class="btn btn-download">Baixar Relatório PDF</button>
         </div>
         
-        <div id="status-container" class="mt-8 space-y-4">
-            <!-- As mensagens de status e pré-visualizações serão injetadas aqui dinamicamente -->
+        <div id="log-area" class="mt-4">
+            <p class="text-gray-600">Clique em "Processar Todos os Dados" para começar.</p>
         </div>
-
+        
+        <div id="preview-section" class="preview-section">
+            <h3 id="preview-title" class="text-xl font-bold text-gray-800 mb-4">Pré-visualização (Amostra de 10 registros)</h3>
+            <div id="preview-content"></div>
+        </div>
     </div>
 
     <script>
-        // Definição dos dados CSV como strings JavaScript
-        const dadosCsv = {
-            'ativos': `MATRICULA,EMPRESA,TITULO DO CARGO,DESC. SITUACAO,Sindicato
-34941,1410,TECH RECRUITER II,Trabalhando,SINDPD SP - SIND.TRAB.EM PROC DADOS E EMPR.EMPRESAS PROC DADOS ESTADO DE SP.
-24401,1410,COORDENADOR ADMINISTRATIVO,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-32104,1410,ANALISTA CONTABIL-FISCAL II,Férias,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-35254,1410,ANALISTA CONTABIL-FISCAL II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-31731,1410,ANALISTA CONTABIL-FISCAL III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-31009,1410,ANALISTA DE CONTROLADORIA I,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-28979,1410,ANALISTA DE CONTROLADORIA II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-24122,1410,ANALISTA DE CONTROLADORIA III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-30556,1410,DESENVOLVEDOR II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-35627,1410,ASSISTENTE DE BPO I,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-34789,1410,ASSISTENTE DE BPO I,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-24505,1410,DESENVOLVEDOR III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-27071,1410,DESENVOLVEDOR III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-24475,1410,ANALISTA DE SISTEMAS E NEGOCIOS II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-26273,1410,ANALISTA DE SISTEMAS E NEGOCIOS II,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL
-32050,1410,ANALISTA DE SISTEMAS E NEGOCIOS III,Trabalhando,SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL`,
-            'ferias': `MATRICULA,DESC. SITUACAO,DIAS DE FÉRIAS
-32104,Férias,10
-32761,Férias,10
-30567,Férias,10
-30502,Férias,15
-33998,Férias,20
-30867,Férias,10
-31237,Férias,15
-32278,Férias,20
-33808,Férias,5
-26910,Férias,30
-30206,Férias,30
-32216,Férias,30
-30570,Férias,30
-32589,Férias,30
-31740,Férias,30
-33235,Férias,30
-34042,Férias,30
-33420,Férias,5
-31190,Férias,5
-31208,Férias,5
-33715,Férias,5
-30280,Férias,5
-34444,Férias,5
-29058,Férias,15
-33628,Férias,20
-33795,Férias,15
-33633,Férias,20
-26463,Férias,10
-31333,Férias,20`,
-            'afastados': `MATRICULA,DESC. SITUACAO,na compra?,
-32572,Licença Maternidade,,
-25961,Licença Maternidade,,
-21151,Auxílio Doença,,
-25857,Auxílio Doença,,
-31326,Licença Maternidade,,
-32930,Licença Maternidade,,
-30515,Licença Maternidade,30515,retorno de férias + licença em 11/06
-34526,Licença Maternidade,34526,retorno de férias + licença em 12/06
-34357,Licença Maternidade,,
-34539,Licença Maternidade,34539,retorno da licença em 04/06
-34330,Auxílio Doença,,
-30264,Licença Maternidade,,
-32345,Licença Maternidade,32345,retorno de férias + licença em 26/05
-30200,Licença Maternidade,,
-34867,Auxílio Doença,,
-34986,Auxílio Doença,,
-34731,Auxílio Doença,,
-34901,Auxílio Doença,,
-33106,Licença Maternidade,33106,retorno da licença em 05/06
-25233,Auxílio Doença,,`,
-            'desligados': `MATRICULA ,DATA DEMISSÃO,COMUNICADO DE DESLIGAMENTO
-34706,2025-05-01,OK
-31486,2025-05-01,OK
-34641,2025-05-01,OK
-26139,2025-05-02,OK
-34179,2025-05-04,OK
-33482,2025-05-04,OK
-33492,2025-05-04,
-33627,2025-05-07,OK
-33404,2025-05-04,OK
-33922,2025-05-08,OK
-25707,2025-05-09,OK
-34935,2025-05-10,OK
-33989,2025-05-11,OK
-29294,2025-05-11,OK
-31394,2025-05-16,OK
-25670,2025-05-15,OK
-34387,2025-05-15,OK
-33711,2025-05-17,OK
-34819,2025-05-16,OK
-35471,2025-05-16,
-32967,2025-05-18,`,
-            'aprendizes': `MATRICULA,TITULO DO CARGO
-34383,APRENDIZ
-34404,APRENDIZ
-35086,APRENDIZ
-34396,APRENDIZ
-34403,APRENDIZ
-35640,APRENDIZ
-34951,APRENDIZ TECH
-34950,APRENDIZ TI
-35088,APRENDIZ
-35635,APRENDIZ
-35081,APRENDIZ
-35641,APRENDIZ
-35637,APRENDIZ
-35639,APRENDIZ
-35642,APRENDIZ
-35636,APRENDIZ
-35607,APRENDIZ AUX  ADMINISTRATIVO
-35366,APRENDIZ
-35643,APRENDIZ
-34392,APRENDIZ
-35085,APRENDIZ
-34398,APRENDIZ
-35089,APRENDIZ
-35644,APRENDIZ
-34394,APRENDIZ
-34953,APRENDIZ TECH
-35058,APRENDIZ
-35638,APRENDIZ
-34952,APRENDIZ
-35571,APRENDIZ
-35609,APRENDIZ AUX  ADMINISTRATIVO
-35610,APRENDIZ AUX  ADMINISTRATIVO
-35608,APRENDIZ AUX  ADMINISTRATIVO`,
-            'estagio': `MATRICULA,TITULO DO CARGO,na compra?
-35591,ESTAGIARIO,#REF!
-35472,ESTAGIARIO,#REF!
-35715,ESTAGIARIO,#REF!
-35719,ESTAGIARIO,#REF!
-35438,ESTAGIARIO,#REF!
-35184,ESTAGIARIO,#REF!
-35186,ESTAGIARIO,#REF!
-35275,ESTAGIARIO,#REF!
-35220,ESTAGIARIO,#REF!
-35133,ESTAGIARIO,#REF!
-35153,ESTAGIARIO,#REF!
-34317,ESTAGIARIO,#REF!
-34319,ESTAGIARIO,#REF!
-34305,ESTAGIARIO,#REF!
-34315,ESTAGIARIO,#REF!
-34346,ESTAGIARIO,#REF!
-34306,ESTAGIARIO,#REF!
-34316,ESTAGIARIO,#REF!
-34349,ESTAGIARIO,#REF!
-34353,ESTAGIARIO,#REF!
-34354,ESTAGIARIO,#REF!
-34625,ESTAGIARIO,#REF!
-35618,ESTAGIARIO,#REF!
-35716,ESTAGIARIO,#REF!
-35087,ESTAGIARIO,#REF!
-35406,ESTAGIARIO,#REF!
-34431,ESTAGIARIO,#REF!
-35616,ESTAGIARIO,#REF!
-35697,ESTAGIARIO,#REF!
-35698,ESTAGIARIO,#REF!
-35592,ESTAGIARIO,#REF!
-35604,ESTAGIARIO,#REF!`,
-            'exterior': `Cadastro,Valor,
-29306,28,desligado
-31227,554.4,RETORNOU DO EXTERIOR - devido o pgto
-32967,660,removido
-34884,554.4,`,
-            'base_dias_uteis': `SINDICADO,DIAS UTEIS 
-SITEPD PR - SIND DOS TRAB EM EMPR PRIVADAS DE PROC DE DADOS DE CURITIBA E REGIAO METROPOLITANA,22
-SINDPPD RS - SINDICATO DOS TRAB. EM PROC. DE DADOS RIO GRANDE DO SUL,21
-SINDPD SP - SIND.TRAB.EM PROC DADOS E EMPR.EMPRESAS PROC DADOS ESTADO DE SP.,22
-SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
-        };
+        window.onload = function() {
+            const { jsPDF } = window.jspdf;
+            const startBtn = document.getElementById('start-process-btn');
+            const progressContainer = document.getElementById('progress-container');
+            const overallProgressFill = document.getElementById('overall-progress-fill');
+            const overallProgressText = document.getElementById('overall-progress-text');
+            const logArea = document.getElementById('log-area');
+            const finalButtons = document.getElementById('final-buttons');
+            const downloadCsvBtn = document.getElementById('download-csv-btn');
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            const previewSection = document.getElementById('preview-section');
+            const previewContent = document.getElementById('preview-content');
 
-        const VR_DIARIO = 37.5;
-        const MES_COMPETENCIA = '05';
+            let finalReportData = [];
+            const VALOR_DIARIO_VR_PADRAO = 37.50;
 
-        // Variáveis de estado global para compartilhar dados entre os passos
-        let dfConsolidado = [];
-        let dfElegiveis = [];
+            const fileMap = {
+                'ativos': 'ATIVOS.xlsx - ATIVOS.csv',
+                'ferias': 'FÉRIAS.xlsx - Planilha1.csv',
+                'desligados': 'DESLIGADOS.xlsx - DESLIGADOS .csv',
+                'estagio': 'ESTÁGIO.xlsx - Planilha1.csv',
+                'afastados': 'AFASTAMENTOS.xlsx - Planilha1.csv',
+                'exterior': 'EXTERIOR.xlsx - Planilha1.csv',
+                'admissoes': 'ADMISSÃO ABRIL.xlsx - Planilha1.csv',
+                'diasUteis': 'Base dias uteis.xlsx - Planilha1.csv'
+            };
 
-        /**
-         * Converte uma string CSV em um array de objetos.
-         * @param {string} csvString A string com dados no formato CSV.
-         * @returns {Array<Object>} O array de objetos representando o CSV.
-         */
-        function parseCSV(csvString) {
-            const lines = csvString.trim().split('\n');
-            if (lines.length <= 1) return [];
-            const headers = lines[0].split(',').map(h => h.trim());
-            const result = [];
-            for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(v => v.trim());
-                if (values.length !== headers.length) continue;
-                const obj = {};
-                for (let j = 0; j < headers.length; j++) {
-                    obj[headers[j]] = values[j];
-                }
-                result.push(obj);
+            /**
+             * Adiciona uma mensagem ao log na interface.
+             * @param {string} message A mensagem a ser exibida.
+             */
+            function logMessage(message) {
+                const p = document.createElement('p');
+                p.textContent = `> ${message}`;
+                p.classList.add('text-gray-700', 'font-mono', 'text-sm', 'my-1');
+                logArea.appendChild(p);
+                logArea.scrollTop = logArea.scrollHeight;
             }
-            return result;
-        }
 
-        /**
-         * Exibe uma mensagem de status com um spinner.
-         * @param {string} message A mensagem a ser exibida.
-         * @param {string} id O ID do passo para identificação.
-         */
-        function showStatus(message, id) {
-            const statusContainer = document.getElementById('status-container');
-            const stepDiv = document.createElement('div');
-            stepDiv.id = `step-${id}`;
-            stepDiv.className = 'flex items-center space-x-2 p-4 rounded-lg bg-gray-100 text-gray-700';
-            stepDiv.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
-            statusContainer.appendChild(stepDiv);
-        }
+            /**
+             * Atualiza a barra de progresso.
+             * @param {number} value O valor de progresso (0-100).
+             */
+            function updateProgress(value) {
+                overallProgressFill.style.width = `${value}%`;
+                overallProgressText.textContent = `${Math.round(value)}%`;
+            }
 
-        /**
-         * Exibe um preview em uma tabela.
-         * @param {string} title Título da tabela.
-         * @param {Array<Object>} data Os dados a serem exibidos.
-         * @param {Array<string>} headers Os cabeçalhos da tabela.
-         * @param {string} containerId O ID do contêiner onde a tabela será inserida.
-         */
-        function showTablePreview(title, data, headers, containerId) {
-            const container = document.getElementById(containerId);
-            const tableDiv = document.createElement('div');
-            tableDiv.className = 'step-container mt-4';
-            tableDiv.innerHTML = `
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">${title}</h2>
-                <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                ${headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${h}</th>`).join('')}
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            ${data.map(row => `
-                                <tr>
-                                    ${Object.values(row).map(val => `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${val}</td>`).join('')}
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            container.appendChild(tableDiv);
-        }
+            /**
+             * Lê e parseia um arquivo CSV do __file_content__.
+             * @param {string} fileName O nome do arquivo a ser lido.
+             * @returns {Promise<Array<Object>>} Uma promessa que resolve com os dados parseados.
+             */
+            async function parseCSV(fileName) {
+                const fileContent = typeof __file_content__ !== 'undefined' ? __file_content__[fileName] : null;
+                if (!fileContent) {
+                    throw new Error(`Arquivo não encontrado: ${fileName}`);
+                }
+                return new Promise((resolve, reject) => {
+                    Papa.parse(fileContent, {
+                        header: true,
+                        skipEmptyLines: true,
+                        complete: (results) => {
+                            if (results.errors.length > 0) {
+                                console.error(`Erros no PapaParse para ${fileName}:`, results.errors);
+                            }
+                            resolve(results.data);
+                        },
+                        error: (error) => {
+                            reject(new Error(`Erro ao parsear o arquivo ${fileName}: ${error.message}`));
+                        }
+                    });
+                });
+            }
 
-        /**
-         * Exibe um preview em uma lista.
-         * @param {string} title Título da lista.
-         * @param {Array<Object>} data Os dados a serem exibidos.
-         * @param {string} containerId O ID do contêiner onde a lista será inserida.
-         */
-        function showListPreview(title, data, containerId) {
-            const container = document.getElementById(containerId);
-            const listDiv = document.createElement('div');
-            listDiv.className = 'step-container mt-4';
-            listDiv.innerHTML = `
-                <h2 class="text-lg font-semibold text-gray-800 mb-4">${title}</h2>
-                <ul class="list-disc list-inside bg-gray-100 p-4 rounded-lg space-y-2">
-                    ${data.map(item => `<li class="text-sm text-gray-700">Matrícula: ${item.Matrícula} - Motivo: ${item.Motivo}</li>`).join('')}
-                </ul>
-            `;
-            container.appendChild(listDiv);
-        }
-        
-        /**
-         * Função que chama a API do Gemini para gerar o relatório final.
-         * @param {string} prompt O texto a ser enviado para o modelo.
-         * @returns {Promise<string>} O texto gerado pelo modelo.
-         */
-        async function generateReportWithGemini(prompt) {
-            const geminiReportDiv = document.getElementById('gemini-report');
-            const loadingHtml = `<div class="loading-text mt-4"><div class="spinner mr-2"></div><span class="text-sm text-gray-500">Gerando relatório...</span></div>`;
-            geminiReportDiv.innerHTML = `<p class="text-gray-600">Aguardando a análise do Gemini...</p>${loadingHtml}`;
+            /**
+             * Converte um array de objetos para uma string CSV.
+             * @param {Array<Object>} data O array de objetos.
+             * @returns {string} A string formatada em CSV.
+             */
+            function convertToCSV(data) {
+                if (!Array.isArray(data) || data.length === 0) return '';
+                const headers = Object.keys(data[0]);
+                const headerRow = headers.join(',');
+                const dataRows = data.map(row => headers.map(header => {
+                    const value = row[header];
+                    const escapedValue = (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) ? `"${value.replace(/"/g, '""')}"` : value;
+                    return escapedValue !== undefined ? escapedValue : '';
+                }).join(','));
+                return [headerRow, ...dataRows].join('\n');
+            }
 
-            let retryCount = 0;
-            const maxRetries = 5;
-            const apiKey = "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            /**
+             * Baixa um arquivo no formato CSV.
+             */
+            function downloadCSV() {
+                const csvContent = convertToCSV(finalReportData);
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'relatorio_final_vr.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                logMessage('Arquivo CSV baixado com sucesso!');
+            }
 
-            while (retryCount < maxRetries) {
-                try {
-                    const payload = { contents: [{ role: "user", parts: [{ text: prompt }] }] };
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+            /**
+             * Baixa um arquivo no formato PDF.
+             */
+            function downloadPDF() {
+                const doc = new jsPDF('p', 'pt', 'a4');
+                const headers = [
+                    'Matricula', 'Sindicato', 'Situação', 'Cargo', 'Dias VR', 'Total VR', 'Observação'
+                ];
+                const data = finalReportData.map(item => [
+                    item['Matricula'],
+                    item['Sindicato'],
+                    item['Situacao'],
+                    item['Cargo'],
+                    item['Dias VR'],
+                    `R$ ${item['Total VR']}`,
+                    item['Observação']
+                ]);
+
+                doc.autoTable({
+                    head: [headers],
+                    body: data,
+                    startY: 60,
+                    theme: 'striped',
+                    headStyles: { fillColor: [79, 70, 229] },
+                    styles: { fontSize: 8 },
+                    columnStyles: {
+                        6: { cellWidth: 'auto' }
+                    },
+                    didDrawPage: (data) => {
+                        doc.text("Relatório de Vale-Refeição", 40, 30);
+                    }
+                });
+                doc.save('relatorio_final_vr.pdf');
+                logMessage('Arquivo PDF baixado com sucesso!');
+            }
+
+            /**
+             * Renderiza uma pré-visualização dos dados na tela.
+             * @param {Array<Object>} data Os dados a serem exibidos.
+             */
+            function renderPreview(data) {
+                previewContent.innerHTML = '';
+                previewSection.style.display = 'block';
+
+                if (Array.isArray(data) && data.length > 0) {
+                    const table = document.createElement('table');
+                    table.classList.add('preview-table');
+
+                    // Cabeçalhos da tabela
+                    const headers = Object.keys(data[0]);
+                    const thead = table.createTHead();
+                    const headerRow = thead.insertRow();
+                    headers.forEach(headerText => {
+                        const th = document.createElement('th');
+                        th.textContent = headerText;
+                        headerRow.appendChild(th);
                     });
 
-                    if (response.status === 429) {
-                        const delay = Math.pow(2, retryCount) * 1000;
-                        console.warn(`API rate limit exceeded. Retrying in ${delay / 1000}s...`);
-                        await new Promise(res => setTimeout(res, delay));
-                        retryCount++;
-                        continue;
-                    }
+                    // Corpo da tabela (limitado a 10 linhas para performance)
+                    const tbody = table.createTBody();
+                    data.slice(0, 10).forEach(item => {
+                        const row = tbody.insertRow();
+                        Object.values(item).forEach(text => {
+                            const cell = row.insertCell();
+                            cell.textContent = text;
+                        });
+                    });
+                    previewContent.appendChild(table);
 
-                    const result = await response.json();
-                    if (result.candidates && result.candidates.length > 0 &&
-                        result.candidates[0].content && result.candidates[0].content.parts &&
-                        result.candidates[0].content.parts.length > 0) {
-                        return result.candidates[0].content.parts[0].text;
-                    } else {
-                        console.error("Estrutura de resposta inesperada da API Gemini:", result);
-                        return "Não foi possível gerar o relatório. Tente novamente.";
-                    }
-                } catch (error) {
-                    console.error("Erro ao chamar a API Gemini:", error);
-                    return "Ocorreu um erro ao gerar o relatório. Tente novamente.";
+                    const totalRecords = document.createElement('p');
+                    totalRecords.classList.add('mt-4', 'text-sm', 'text-gray-600');
+                    totalRecords.textContent = `Exibindo uma amostra de 10 de um total de ${data.length} registros.`;
+                    previewContent.appendChild(totalRecords);
+                } else {
+                    previewContent.innerHTML = '<p class="text-gray-500 mt-4">Nenhum dado para pré-visualização.</p>';
                 }
             }
-            return "Falha ao gerar o relatório após várias tentativas devido ao limite de taxa da API.";
-        }
 
-        // ======================= FUNÇÕES DE CADA PASSO =======================
+            /**
+             * Função principal para processar todos os dados.
+             */
+            async function processAllData() {
+                startBtn.disabled = true;
+                logArea.innerHTML = '';
+                previewSection.style.display = 'none';
+                progressContainer.classList.remove('hidden');
+                finalButtons.classList.add('hidden');
+                updateProgress(0);
 
-        async function step1_consolidate_data() {
-            const btn = document.getElementById('step-1-btn');
-            btn.textContent = 'Processando...';
-            
-            showStatus('Passo 1: Consolidando dados de colaboradores e férias...', 1);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            let dfAtivos = parseCSV(dadosCsv.ativos);
-            const dfFerias = parseCSV(dadosCsv.ferias);
-            
-            const feriasMap = new Map(dfFerias.map(item => [item['MATRICULA'], parseInt(item['DIAS DE FÉRIAS'])]));
-            dfConsolidado = dfAtivos.map(colaborador => {
-                colaborador['DIAS DE FÉRIAS'] = feriasMap.get(colaborador['MATRICULA']) || 0;
-                colaborador['excluido'] = false;
-                colaborador['motivo_exclusao'] = '';
-                return colaborador;
-            });
-            
-            const previewData = dfConsolidado.map(c => ({
-                'Matrícula': c['MATRICULA'],
-                'Cargo': c['TITULO DO CARGO'],
-                'Sindicato': c['Sindicato'],
-                'Dias de Férias': c['DIAS DE FÉRIAS']
-            }));
-            const previewHeaders = ['Matrícula', 'Cargo', 'Sindicato', 'Dias de Férias'];
-            
-            showTablePreview('Pré-visualização dos Dados Consolidados', previewData, previewHeaders, 'status-container');
+                try {
+                    logMessage("Iniciando o processamento de dados...");
+                    
+                    // Passo 1: Carregar todos os arquivos
+                    logMessage("Carregando planilhas...");
+                    const [ativosData, feriasData, desligadosData, estagioData, afastadosData, exteriorData, diasUteisData] = await Promise.all([
+                        parseCSV(fileMap.ativos),
+                        parseCSV(fileMap.ferias),
+                        parseCSV(fileMap.desligados),
+                        parseCSV(fileMap.estagio),
+                        parseCSV(fileMap.afastados),
+                        parseCSV(fileMap.exterior),
+                        parseCSV(fileMap.diasUteis)
+                    ]);
+                    
+                    logMessage(`Planilha ATIVOS carregada: ${ativosData.length} registros.`);
+                    logMessage("Planilhas auxiliares carregadas.");
+                    updateProgress(20);
 
-            btn.textContent = '✅ Concluído';
-            btn.classList.remove('bg-blue-600');
-            btn.classList.add('bg-green-600');
-            
-            const nextBtn = document.getElementById('step-2-btn');
-            nextBtn.disabled = false;
-            nextBtn.classList.remove('bg-gray-400');
-            nextBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-        }
+                    // Passo 2: Criar mapas para consultas rápidas
+                    logMessage("Criando mapas de busca rápida...");
+                    const feriasSet = new Set(feriasData.map(f => f.MATRICULA?.trim()));
+                    const desligadosSet = new Set(desligadosData.map(d => d['MATRICULA ']?.trim()));
+                    const estagioSet = new Set(estagioData.map(e => e.MATRICULA?.trim()));
+                    const afastadosSet = new Set(afastadosData.map(a => a.MATRICULA?.trim()));
+                    const exteriorSet = new Set(exteriorData.map(e => e.Cadastro?.trim()));
+                    const diasUteisMap = new Map(diasUteisData.map(d => [d.SINDICATO?.trim(), parseInt(d['DIAS UTEIS '], 10) || 22]));
+                    updateProgress(40);
 
-        async function step2_handle_exclusions() {
-            const btn = document.getElementById('step-2-btn');
-            btn.textContent = 'Processando...';
-            btn.disabled = true;
-            
-            showStatus('Passo 2: Tratando exclusões (aprendizes, estagiários, desligados, afastados)...', '2-status');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+                    // Passo 3: Processar a lista principal de ativos para garantir a inclusão de todos os registros
+                    logMessage("Processando cada registro da planilha ATIVOS...");
+                    const reportData = ativosData.map(colaborador => {
+                        const matricula = colaborador.MATRICULA?.trim() || '';
+                        let situacao = colaborador['DESC. SITUACAO']?.trim() || 'Trabalhando';
+                        let diasVR = 0;
+                        let observacao = '';
+                        const sindicato = colaborador.Sindicato?.trim() || 'N/A';
+                        const diasUteisBase = diasUteisMap.get(sindicato) || 22;
 
-            // Carrega as listas de exclusão e remove espaços em branco extras dos IDs
-            const dfAprendizes = parseCSV(dadosCsv.aprendizes);
-            const dfEstagio = parseCSV(dadosCsv.estagio);
-            const dfAfastados = parseCSV(dadosCsv.afastados);
-            const dfDesligados = parseCSV(dadosCsv.desligados);
-            const dfExterior = parseCSV(dadosCsv.exterior);
+                        // Aplica as regras de negócio em ordem de prioridade
+                        if (estagioSet.has(matricula)) {
+                            situacao = 'Estagiário';
+                            observacao = 'Sem VR';
+                            diasVR = 0;
+                        } else if (afastadosSet.has(matricula)) {
+                            situacao = 'Afastado';
+                            observacao = 'Sem VR';
+                            diasVR = 0;
+                        } else if (desligadosSet.has(matricula)) {
+                            situacao = 'Desligado';
+                            observacao = 'VR calculado em rescisão';
+                            diasVR = 0;
+                        } else if (feriasSet.has(matricula)) {
+                            situacao = 'Férias';
+                            observacao = 'VR referente ao período de Férias';
+                            diasVR = diasUteisBase;
+                        } else {
+                            // Default para quem não se enquadra nas regras acima
+                            diasVR = diasUteisBase;
+                            observacao = 'VR mensal completo';
+                        }
+                        
+                        // Checa se está no exterior (não exclui, apenas adiciona observação)
+                        if (exteriorSet.has(matricula)) {
+                            observacao += (observacao ? '; ' : '') + 'Retorno do Exterior';
+                        }
+                        
+                        // Formatação final do objeto
+                        return {
+                            'Matricula': matricula,
+                            'Sindicato': sindicato,
+                            'Situacao': situacao,
+                            'Cargo': colaborador['TITULO DO CARGO']?.trim() || 'N/A',
+                            'Dias VR': diasVR,
+                            'Total VR': (diasVR * VALOR_DIARIO_VR_PADRAO).toFixed(2),
+                            'Observação': observacao || 'N/A',
+                        };
+                    });
+                    
+                    updateProgress(80);
+                    logMessage(`Processamento concluído. ${reportData.length} registros no relatório final.`);
+                    finalReportData = reportData;
 
-            const excluidosAprendizes = new Set(dfAprendizes.map(a => a['MATRICULA'].trim()));
-            const excluidosEstagio = new Set(dfEstagio.map(e => e['MATRICULA'].trim()));
-            const excluidosAfastados = new Set(dfAfastados.map(a => a['MATRICULA'].trim()));
-            const excluidosDesligados = new Set(dfDesligados.map(d => d['MATRICULA '].trim())); // O nome da coluna tem um espaço
-            const excluidosExterior = new Set(dfExterior.map(e => e['Cadastro'].trim()));
+                    // Exibir resultados e habilitar botões
+                    renderPreview(finalReportData);
+                    finalButtons.classList.remove('hidden');
+                    updateProgress(100);
 
-            let totalExcluidos = 0;
-            const listaExcluidos = [];
-            
-            dfConsolidado.forEach(colaborador => {
-                const matricula = colaborador['MATRICULA'].trim();
-                let motivo = '';
-
-                if (excluidosAprendizes.has(matricula)) {
-                    motivo = 'Aprendiz';
-                } else if (excluidosEstagio.has(matricula)) {
-                    motivo = 'Estagiário';
-                } else if (excluidosAfastados.has(matricula)) {
-                    motivo = 'Afastado';
-                } else if (excluidosDesligados.has(matricula)) {
-                    motivo = 'Desligado';
-                } else if (excluidosExterior.has(matricula)) {
-                    motivo = 'No Exterior';
+                } catch (error) {
+                    logMessage(`Erro crítico: ${error.message}`, 'error');
+                    console.error("Erro no processamento:", error);
+                    alert(`Ocorreu um erro ao processar os arquivos. Verifique o console para mais detalhes. Erro: ${error.message}`);
+                } finally {
+                    startBtn.disabled = false;
+                    progressContainer.classList.add('hidden');
                 }
+            }
 
-                if (motivo) {
-                    colaborador.excluido = true;
-                    colaborador.motivo_exclusao = motivo;
-                    totalExcluidos++;
-                    listaExcluidos.push({ Matrícula: matricula, Motivo: motivo });
-                }
-            });
-            
-            // Filtra os elegíveis para a próxima etapa
-            dfElegiveis = dfConsolidado.filter(c => !c.excluido);
-
-            showListPreview(`Pré-visualização de ${totalExcluidos} Colaboradores Excluídos`, listaExcluidos, 'status-container');
-            showTablePreview(
-                `Pré-visualização de ${dfElegiveis.length} Colaboradores Elegíveis`,
-                dfElegiveis.map(c => ({ 'Matrícula': c['MATRICULA'], 'Cargo': c['TITULO DO CARGO'] })),
-                ['Matrícula', 'Cargo'],
-                'status-container'
-            );
-
-            btn.textContent = '✅ Concluído';
-            btn.classList.remove('bg-blue-600');
-            btn.classList.add('bg-green-600');
-            
-            const nextBtn = document.getElementById('step-3-btn');
-            nextBtn.disabled = false;
-            nextBtn.classList.remove('bg-gray-400');
-            nextBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-        }
-
-        async function step3_calculate_benefits() {
-            const btn = document.getElementById('step-3-btn');
-            btn.textContent = 'Processando...';
-            btn.disabled = true;
-
-            showStatus('Passo 3: Calculando o valor do benefício para os elegíveis...', '3-status');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            const dfDiasUteis = parseCSV(dadosCsv.base_dias_uteis);
-            const diasUteisMap = new Map(dfDiasUteis.map(item => [item['SINDICADO'].trim(), parseInt(item['DIAS UTEIS '])]));
-
-            let totalElegiveis = 0;
-            let totalVr = 0;
-            
-            const relatorioCalculo = dfElegiveis.map(colaborador => {
-                totalElegiveis++;
-                const diasUteisBase = diasUteisMap.get(colaborador['Sindicato']) || 22;
-                const diasVr = Math.max(0, diasUteisBase - colaborador['DIAS DE FÉRIAS']);
-                const valorTotalVr = diasVr * VR_DIARIO;
-                totalVr += valorTotalVr;
-
-                return {
-                    'Matrícula': colaborador['MATRICULA'],
-                    'Sindicato': colaborador['Sindicato'],
-                    'Dias Úteis': diasUteisBase,
-                    'Dias de Férias': colaborador['DIAS DE FÉRIAS'],
-                    'Dias VR': diasVr,
-                    'Valor Total VR': `R$ ${valorTotalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}`
-                };
-            });
-
-            const previewHeaders = ['Matrícula', 'Sindicato', 'Dias Úteis', 'Dias de Férias', 'Dias VR', 'Valor Total VR'];
-            showTablePreview('Pré-visualização do Cálculo de VR', relatorioCalculo, previewHeaders, 'status-container');
-
-            btn.textContent = '✅ Concluído';
-            btn.classList.remove('bg-blue-600');
-            btn.classList.add('bg-green-600');
-            
-            const nextBtn = document.getElementById('step-4-btn');
-            nextBtn.disabled = false;
-            nextBtn.classList.remove('bg-gray-400');
-            nextBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
-        }
-
-        async function step4_generate_report() {
-            const btn = document.getElementById('step-4-btn');
-            btn.textContent = 'Processando...';
-            btn.disabled = true;
-
-            const totalElegiveis = dfElegiveis.length;
-            const totalVr = dfElegiveis.reduce((acc, c) => {
-                const diasUteisBase = (parseCSV(dadosCsv.base_dias_uteis).find(d => d['SINDICADO'].trim() === c['Sindicato']) || { 'DIAS UTEIS ': 22 })['DIAS UTEIS '];
-                const diasVr = Math.max(0, diasUteisBase - c['DIAS DE FÉRIAS']);
-                return acc + (diasVr * VR_DIARIO);
-            }, 0);
-            const totalExcluidos = dfConsolidado.length - totalElegiveis;
-
-            const prompt = `
-            Com base nos seguintes dados processados, gere um resumo profissional e conciso para um relatório de Vale Refeição. Inclua o valor total do VR, o número de colaboradores elegíveis, e qualquer insight relevante sobre os dados.
-            
-            Dados de entrada:
-            - Valor total a ser pago em VR: R$ ${totalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}
-            - Total de colaboradores elegíveis: ${totalElegiveis}
-            - Colaboradores excluídos: ${totalExcluidos}
-            
-            O relatório deve ser formal, amigável e focado nos resultados principais. Não precisa ser muito longo, apenas um resumo direto e relevante para o gestor de RH.
-            `;
-            
-            const resultContainer = document.createElement('div');
-            resultContainer.id = 'result-container';
-            resultContainer.className = 'mt-8';
-            resultContainer.innerHTML = `
-                <h2 class="text-xl font-semibold text-gray-800 mb-4">Relatório Final de Vale Refeição</h2>
-                <div id="gemini-report" class="bg-gray-100 p-6 rounded-lg mb-6">
-                    <p class="text-gray-600">Aguardando a análise do Gemini...</p>
-                    <div class="loading-text mt-4">
-                        <div class="spinner mr-2"></div>
-                        <span class="text-sm text-gray-500">Gerando relatório...</span>
-                    </div>
-                </div>
-            `;
-            document.getElementById('status-container').appendChild(resultContainer);
-            
-            const geminiReport = await generateReportWithGemini(prompt);
-            document.getElementById('gemini-report').innerHTML = `<p class="text-gray-800">${geminiReport}</p>`;
-            
-            const relatorioFinal = dfElegiveis.map(colaborador => {
-                const diasUteisBase = (parseCSV(dadosCsv.base_dias_uteis).find(d => d['SINDICADO'].trim() === colaborador['Sindicato']) || { 'DIAS UTEIS ': 22 })['DIAS UTEIS '];
-                const diasVr = Math.max(0, diasUteisBase - colaborador['DIAS DE FÉRIAS']);
-                const valorTotalVr = diasVr * VR_DIARIO;
-
-                return {
-                    'Matrícula': colaborador['MATRICULA'],
-                    'Cargo': colaborador['TITULO DO CARGO'],
-                    'Sindicato': colaborador['Sindicato'],
-                    'Dias Úteis': diasUteisBase,
-                    'Dias de Férias': colaborador['DIAS DE FÉRIAS'],
-                    'Dias VR': diasVr,
-                    'Valor Total VR': `R$ ${valorTotalVr.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.')}`
-                };
-            });
-
-            const previewHeaders = ['Matrícula', 'Cargo', 'Sindicato', 'Dias Úteis', 'Dias de Férias', 'Dias VR', 'Valor Total VR'];
-            showTablePreview('Tabela Detalhada do Cálculo', relatorioFinal, previewHeaders, 'status-container');
-
-
-            btn.textContent = '✅ Concluído';
-            btn.classList.remove('bg-blue-600');
-            btn.classList.add('bg-green-600');
-        }
-
-
-        // ======================= EVENT LISTENERS =======================
-        window.onload = function() {
-            // Inicia o primeiro passo automaticamente
-            step1_consolidate_data();
-
-            // Adiciona listeners para os botões dos passos subsequentes
-            document.getElementById('step-2-btn').addEventListener('click', step2_handle_exclusions);
-            document.getElementById('step-3-btn').addEventListener('click', step3_calculate_benefits);
-            document.getElementById('step-4-btn').addEventListener('click', step4_generate_report);
+            // Event Listeners
+            startBtn.addEventListener('click', processAllData);
+            downloadCsvBtn.addEventListener('click', downloadCSV);
+            downloadPdfBtn.addEventListener('click', downloadPDF);
         };
     </script>
-
 </body>
 </html>
