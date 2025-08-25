@@ -53,12 +53,12 @@
     <div class="container mx-auto bg-white rounded-xl shadow-lg p-8">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Agente de Automação de VR com Gemini</h1>
         <p class="text-center text-gray-600 mb-6">
-            Bem-vindo ao agente de automação do cálculo de Vale Refeição. Siga os passos abaixo para gerar o relatório com a ajuda do Gemini.
+            Bem-vindo ao agente de automação do cálculo de Vale Refeição. A execução do primeiro passo já começou. Siga os botões abaixo para continuar.
         </p>
 
         <!-- Controles de Automação Passo a Passo -->
         <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4 mb-8">
-            <button id="step-1-btn" class="btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg">
+            <button id="step-1-btn" class="btn bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
                 1. Consolidar Dados
             </button>
             <button id="step-2-btn" class="btn bg-gray-400 text-white font-bold py-3 px-6 rounded-full shadow-lg" disabled>
@@ -302,7 +302,9 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
          */
         function showTablePreview(title, data, headers, containerId) {
             const container = document.getElementById(containerId);
-            container.innerHTML = `
+            const tableDiv = document.createElement('div');
+            tableDiv.className = 'step-container mt-4';
+            tableDiv.innerHTML = `
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">${title}</h2>
                 <div class="overflow-x-auto rounded-lg shadow-md border border-gray-200">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -321,7 +323,7 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
                     </table>
                 </div>
             `;
-            container.classList.remove('hidden');
+            container.appendChild(tableDiv);
         }
 
         /**
@@ -332,13 +334,15 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
          */
         function showListPreview(title, data, containerId) {
             const container = document.getElementById(containerId);
-            container.innerHTML = `
+            const listDiv = document.createElement('div');
+            listDiv.className = 'step-container mt-4';
+            listDiv.innerHTML = `
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">${title}</h2>
                 <ul class="list-disc list-inside bg-gray-100 p-4 rounded-lg space-y-2">
                     ${data.map(item => `<li class="text-sm text-gray-700">${item.Matrícula}: ${item.Motivo}</li>`).join('')}
                 </ul>
             `;
-            container.classList.remove('hidden');
+            container.appendChild(listDiv);
         }
         
         /**
@@ -390,26 +394,9 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             return "Falha ao gerar o relatório após várias tentativas devido ao limite de taxa da API.";
         }
 
-        /**
-         * Limpa o estado e a UI para um novo processo.
-         */
-        function resetState() {
-            dfConsolidado = [];
-            dfElegiveis = [];
-            document.getElementById('status-container').innerHTML = '';
-            document.getElementById('step-1-btn').disabled = false;
-            document.getElementById('step-2-btn').disabled = true;
-            document.getElementById('step-3-btn').disabled = true;
-            document.getElementById('step-4-btn').disabled = true;
-            document.getElementById('step-1-btn').classList.remove('bg-gray-400');
-            document.getElementById('step-1-btn').classList.add('bg-blue-600');
-        }
-
         // ======================= FUNÇÕES DE CADA PASSO =======================
 
         async function step1_consolidate_data() {
-            resetState();
-            
             const btn = document.getElementById('step-1-btn');
             btn.textContent = 'Processando...';
             
@@ -440,7 +427,6 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             btn.textContent = '✅ Concluído';
             btn.classList.remove('bg-blue-600');
             btn.classList.add('bg-green-600');
-            btn.disabled = true;
             
             const nextBtn = document.getElementById('step-2-btn');
             nextBtn.disabled = false;
@@ -478,25 +464,20 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
                 if (excluidosManual.has(colaborador['MATRICULA'])) {
                     colaborador.excluido = true;
                     colaborador.motivo_exclusao = 'Aprendiz ou Estagiário';
-                    totalExcluidos++;
-                    listaExcluidos.push({Matrícula: colaborador['MATRICULA'], Motivo: 'Aprendiz ou Estagiário'});
                 } else if (afastadosIds.has(colaborador['MATRICULA'])) {
                     colaborador.excluido = true;
                     colaborador.motivo_exclusao = 'Afastamento';
-                    totalExcluidos++;
-                    listaExcluidos.push({Matrícula: colaborador['MATRICULA'], Motivo: 'Afastamento'});
                 } else if (desligadosMesAnterior.has(colaborador['MATRICULA'])) {
                     colaborador.excluido = true;
                     colaborador.motivo_exclusao = 'Desligado até o dia 15';
-                    totalExcluidos++;
-                    listaExcluidos.push({Matrícula: colaborador['MATRICULA'], Motivo: 'Desligado'});
                 } else if (exteriorIds.has(colaborador['MATRICULA'])) {
                     colaborador.excluido = true;
                     colaborador.motivo_exclusao = 'No Exterior';
-                    totalExcluidos++;
-                    listaExcluidos.push({Matrícula: colaborador['MATRICULA'], Motivo: 'No Exterior'});
                 }
             });
+            
+            listaExcluidos.push(...dfConsolidado.filter(c => c.excluido).map(c => ({ Matrícula: c['MATRICULA'], Motivo: c['motivo_exclusao'] })));
+            totalExcluidos = listaExcluidos.length;
             
             showListPreview(`Pré-visualização de ${totalExcluidos} Colaboradores Excluídos`, listaExcluidos, 'status-container');
 
@@ -625,10 +606,15 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
 
 
         // ======================= EVENT LISTENERS =======================
-        document.getElementById('step-1-btn').addEventListener('click', step1_consolidate_data);
-        document.getElementById('step-2-btn').addEventListener('click', step2_handle_exclusions);
-        document.getElementById('step-3-btn').addEventListener('click', step3_calculate_benefits);
-        document.getElementById('step-4-btn').addEventListener('click', step4_generate_report);
+        window.onload = function() {
+            // Inicia o primeiro passo automaticamente
+            step1_consolidate_data();
+
+            // Adiciona listeners para os botões dos passos subsequentes
+            document.getElementById('step-2-btn').addEventListener('click', step2_handle_exclusions);
+            document.getElementById('step-3-btn').addEventListener('click', step3_calculate_benefits);
+            document.getElementById('step-4-btn').addEventListener('click', step4_generate_report);
+        };
     </script>
 
 </body>
