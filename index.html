@@ -191,38 +191,38 @@
 35610,APRENDIZ AUX  ADMINISTRATIVO
 35608,APRENDIZ AUX  ADMINISTRATIVO`,
             'estagio': `MATRICULA,TITULO DO CARGO,na compra?
-35591,ESTAGIARIO,#REF!
-35472,ESTAGIARIO,#REF!
-35715,ESTAGIARIO,#REF!
-35719,ESTAGIARIO,#REF!
-35438,ESTAGIARIO,#REF!
-35184,ESTAGIARIO,#REF!
-35186,ESTAGIARIO,#REF!
-35275,ESTAGIARIO,#REF!
-35220,ESTAGIARIO,#REF!
-35133,ESTAGIARIO,#REF!
-35153,ESTAGIARIO,#REF!
-34317,ESTAGIARIO,#REF!
-34319,ESTAGIARIO,#REF!
-34305,ESTAGIARIO,#REF!
-34315,ESTAGIARIO,#REF!
-34346,ESTAGIARIO,#REF!
-34306,ESTAGIARIO,#REF!
-34316,ESTAGIARIO,#REF!
-34349,ESTAGIARIO,#REF!
-34353,ESTAGIARIO,#REF!
-34354,ESTAGIARIO,#REF!
-34625,ESTAGIARIO,#REF!
-35618,ESTAGIARIO,#REF!
-35716,ESTAGIARIO,#REF!
-35087,ESTAGIARIO,#REF!
-35406,ESTAGIARIO,#REF!
-34431,ESTAGIARIO,#REF!
-35616,ESTAGIARIO,#REF!
-35697,ESTAGIARIO,#REF!
-35698,ESTAGIARIO,#REF!
-35592,ESTAGIARIO,#REF!
-35604,ESTAGIARIO,#REF!`,
+35591,ESTAGIARIO,
+35472,ESTAGIARIO,
+35715,ESTAGIARIO,
+35719,ESTAGIARIO,
+35438,ESTAGIARIO,
+35184,ESTAGIARIO,
+35186,ESTAGIARIO,
+35275,ESTAGIARIO,
+35220,ESTAGIARIO,
+35133,ESTAGIARIO,
+35153,ESTAGIARIO,
+34317,ESTAGIARIO,
+34319,ESTAGIARIO,
+34305,ESTAGIARIO,
+34315,ESTAGIARIO,
+34346,ESTAGIARIO,
+34306,ESTAGIARIO,
+34316,ESTAGIARIO,
+34349,ESTAGIARIO,
+34353,ESTAGIARIO,
+34354,ESTAGIARIO,
+34625,ESTAGIARIO,
+35618,ESTAGIARIO,
+35716,ESTAGIARIO,
+35087,ESTAGIARIO,
+35406,ESTAGIARIO,
+34431,ESTAGIARIO,
+35616,ESTAGIARIO,
+35697,ESTAGIARIO,
+35698,ESTAGIARIO,
+35592,ESTAGIARIO,
+35604,ESTAGIARIO,`,
             'exterior': `Cadastro,Valor,
 29306,28,desligado
 31227,554.4,RETORNOU DO EXTERIOR - devido o pgto
@@ -246,6 +246,7 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
 
         /**
          * Converte uma string CSV em um array de objetos.
+         * Substitui "#REF!" por uma string vazia para limpar os dados.
          * @param {string} csvString A string com dados no formato CSV.
          * @returns {Array<Object>} O array de objetos representando o CSV.
          */
@@ -254,7 +255,9 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             const headers = lines[0].split(',').map(h => h.trim());
             const result = [];
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(v => v.trim());
+                const rawValues = lines[i].split(',');
+                // A linha abaixo já limpa os valores, mas a fonte de dados na string já foi corrigida agora.
+                const values = rawValues.map(v => v.trim().replace(/#REF!/g, ''));
                 if (values.length !== headers.length) continue;
                 const obj = {};
                 for (let j = 0; j < headers.length; j++) {
@@ -396,8 +399,7 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             document.getElementById('step-results').innerHTML = ''; // Limpa resultados anteriores
 
             showStatus('Passo 2: Tratando exclusões (aprendizes, estagiários, desligados, afastados)...', 2);
-            //await new Promise(resolve => setTimeout(resolve, 1500));
-
+            
             const dfAprendizes = parseCSV(dadosCsv.aprendizes);
             const dfEstagio = parseCSV(dadosCsv.estagio);
             const excluidosManual = new Set([...dfAprendizes.map(a => a['MATRICULA']), ...dfEstagio.map(e => e['MATRICULA'])]);
