@@ -396,7 +396,7 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             document.getElementById('step-results').innerHTML = ''; // Limpa resultados anteriores
 
             showStatus('Passo 2: Tratando exclusões (aprendizes, estagiários, desligados, afastados)...', 2);
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            //await new Promise(resolve => setTimeout(resolve, 1500));
 
             const dfAprendizes = parseCSV(dadosCsv.aprendizes);
             const dfEstagio = parseCSV(dadosCsv.estagio);
