@@ -339,7 +339,7 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             listDiv.innerHTML = `
                 <h2 class="text-lg font-semibold text-gray-800 mb-4">${title}</h2>
                 <ul class="list-disc list-inside bg-gray-100 p-4 rounded-lg space-y-2">
-                    ${data.map(item => `<li class="text-sm text-gray-700">${item.Matrícula}: ${item.Motivo}</li>`).join('')}
+                    ${data.map(item => `<li class="text-sm text-gray-700">Matrícula: ${item.Matrícula} - Motivo: ${item.Motivo}</li>`).join('')}
                 </ul>
             `;
             container.appendChild(listDiv);
@@ -442,44 +442,56 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             showStatus('Passo 2: Tratando exclusões (aprendizes, estagiários, desligados, afastados)...', '2-status');
             await new Promise(resolve => setTimeout(resolve, 1000));
 
+            // Carrega as listas de exclusão e remove espaços em branco extras dos IDs
             const dfAprendizes = parseCSV(dadosCsv.aprendizes);
             const dfEstagio = parseCSV(dadosCsv.estagio);
-            const excluidosManual = new Set([...dfAprendizes.map(a => a['MATRICULA']), ...dfEstagio.map(e => e['MATRICULA'])]);
-
             const dfAfastados = parseCSV(dadosCsv.afastamentos);
-            const afastadosIds = new Set(dfAfastados.map(a => a['MATRICULA']));
-
             const dfDesligados = parseCSV(dadosCsv.desligados);
-            const desligadosMesAnterior = new Set(dfDesligados.filter(item => {
-                const dataDemissao = new Date(item['DATA DEMISSÃO']);
-                return dataDemissao.getMonth() + 1 === parseInt(MES_COMPETENCIA) && dataDemissao.getDate() <= 15;
-            }).map(d => d['MATRICULA '].trim()));
-
             const dfExterior = parseCSV(dadosCsv.exterior);
-            const exteriorIds = new Set(dfExterior.map(e => e['Cadastro']));
+
+            const excluidosAprendizes = new Set(dfAprendizes.map(a => a['MATRICULA'].trim()));
+            const excluidosEstagio = new Set(dfEstagio.map(e => e['MATRICULA'].trim()));
+            const excluidosAfastados = new Set(dfAfastados.map(a => a['MATRICULA'].trim()));
+            const excluidosDesligados = new Set(dfDesligados.map(d => d['MATRICULA '].trim())); // O nome da coluna tem um espaço
+            const excluidosExterior = new Set(dfExterior.map(e => e['Cadastro'].trim()));
 
             let totalExcluidos = 0;
             const listaExcluidos = [];
+            
             dfConsolidado.forEach(colaborador => {
-                if (excluidosManual.has(colaborador['MATRICULA'])) {
+                const matricula = colaborador['MATRICULA'].trim();
+                let motivo = '';
+
+                if (excluidosAprendizes.has(matricula)) {
+                    motivo = 'Aprendiz';
+                } else if (excluidosEstagio.has(matricula)) {
+                    motivo = 'Estagiário';
+                } else if (excluidosAfastados.has(matricula)) {
+                    motivo = 'Afastado';
+                } else if (excluidosDesligados.has(matricula)) {
+                    motivo = 'Desligado';
+                } else if (excluidosExterior.has(matricula)) {
+                    motivo = 'No Exterior';
+                }
+
+                if (motivo) {
                     colaborador.excluido = true;
-                    colaborador.motivo_exclusao = 'Aprendiz ou Estagiário';
-                } else if (afastadosIds.has(colaborador['MATRICULA'])) {
-                    colaborador.excluido = true;
-                    colaborador.motivo_exclusao = 'Afastamento';
-                } else if (desligadosMesAnterior.has(colaborador['MATRICULA'])) {
-                    colaborador.excluido = true;
-                    colaborador.motivo_exclusao = 'Desligado até o dia 15';
-                } else if (exteriorIds.has(colaborador['MATRICULA'])) {
-                    colaborador.excluido = true;
-                    colaborador.motivo_exclusao = 'No Exterior';
+                    colaborador.motivo_exclusao = motivo;
+                    totalExcluidos++;
+                    listaExcluidos.push({ Matrícula: matricula, Motivo: motivo });
                 }
             });
             
-            listaExcluidos.push(...dfConsolidado.filter(c => c.excluido).map(c => ({ Matrícula: c['MATRICULA'], Motivo: c['motivo_exclusao'] })));
-            totalExcluidos = listaExcluidos.length;
-            
+            // Filtra os elegíveis para a próxima etapa
+            dfElegiveis = dfConsolidado.filter(c => !c.excluido);
+
             showListPreview(`Pré-visualização de ${totalExcluidos} Colaboradores Excluídos`, listaExcluidos, 'status-container');
+            showTablePreview(
+                `Pré-visualização de ${dfElegiveis.length} Colaboradores Elegíveis`,
+                dfElegiveis.map(c => ({ 'Matrícula': c['MATRICULA'], 'Cargo': c['TITULO DO CARGO'] })),
+                ['Matrícula', 'Cargo'],
+                'status-container'
+            );
 
             btn.textContent = '✅ Concluído';
             btn.classList.remove('bg-blue-600');
@@ -502,8 +514,6 @@ SINDPD RJ - SINDICATO PROFISSIONAIS DE PROC DADOS DO RIO DE JANEIRO,21`
             const dfDiasUteis = parseCSV(dadosCsv.base_dias_uteis);
             const diasUteisMap = new Map(dfDiasUteis.map(item => [item['SINDICADO'].trim(), parseInt(item['DIAS UTEIS '])]));
 
-            dfElegiveis = dfConsolidado.filter(c => !c.excluido);
-            
             let totalElegiveis = 0;
             let totalVr = 0;
             
