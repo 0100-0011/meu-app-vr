@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+from langchain_perplexity import ChatPerplexity
 
 # Cria cliente com chave segura
 chat = ChatPerplexity(
