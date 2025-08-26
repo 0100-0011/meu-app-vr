@@ -1,2 +1,6 @@
-# meu-app-vr
-Aplicação para o Desafio 4 do Curso agentes de IA
+# Estrutura do Projeto
+
+├── app.py
+├── requirements.txt
+└── README.md
+
