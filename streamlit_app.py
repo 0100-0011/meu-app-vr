@@ -1,55 +1,50 @@
 import streamlit as st
 import pandas as pd
 import io
-import requests
 
-# Função para chamar a API Perplexity - ajuste URL e API key
-def call_perplexity_api(prompt: str) -> str:
-    api_key = st.secrets["PERPLEXITY_API_KEY"]
-    headers = {"Authorization": f"Bearer {api_key}"}
-    url = "https://api.perplexity.ai/chat/completions"
-    data = {"query": prompt}
-    response = requests.post(url, json=data, headers=headers)
-    response.raise_for_status()
-    return response.json().get("answer", "")
+# Cria cliente com chave segura
+chat = ChatPerplexity(
+    temperature=0,
+    pplx_api_key=st.secrets["pplx_api_key"],
+    model="sonar"
+)
 
-st.title("Consolidação VR integrada com Perplexity")
+st.title("App com API Perplexity e Planilhas")
 
-uploaded_files = st.file_uploader(
-    "Envie arquivos Excel/CSV", type=['xlsx','csv'], accept_multiple_files=True)
+uploaded_files = st.file_uploader("Envie Excel", type="xlsx", accept_multiple_files=True)
 
-dataframes = {}
 if uploaded_files:
-    for uf in uploaded_files:
-        if uf.name.endswith('.xlsx'):
-            dataframes[uf.name.split('.')[0]] = pd.read_excel(uf)
-        else:
-            dataframes[uf.name.split('.')[0]] = pd.read_csv(uf)
-    st.success(f"{len(dataframes)} arquivos carregados.")
+    dataframes = {}
+    for f in uploaded_files:
+        n = f.name.split(".")[0].upper()
+        dataframes[n] = pd.read_excel(f)
 
-user_command = st.text_input("Digite seu comando para análise:")
+    if "ATIVOS" in dataframes:
+        consolidated_df = dataframes["ATIVOS"].copy()
+        st.dataframe(consolidated_df)
 
-if user_command and st.button("Enviar à API Perplexity"):
-    answer = call_perplexity_api(user_command)
-    st.markdown("**Resposta do agente:**")
-    st.write(answer)
+        summary = (
+            f"Número funcionários: {len(consolidated_df)}\n"
+            f"Colunas: {list(consolidated_df.columns)}\n"
+            f"Amostra:\n{consolidated_df.head().to_string(index=False)}"
+        )
 
-    # Simples lógica para executar consolidação caso o usuário queira:
-    if "consolida" in user_command.lower() and 'ATIVOS' in dataframes:
-        consolidated_df = dataframes['ATIVOS'].copy()
-        if 'FERIAS' in dataframes:
-            ferias_cols = ['MATRICULA', 'DESC. SITUACAO', 'DIAS DE FERIAS']
-            consolidated_df = pd.merge(consolidated_df, dataframes['FERIAS'][ferias_cols],
-                                       on='MATRICULA', how='left')
-        # Acrescente suas demais etapas de consolidação aqui
+        pergunta = st.text_input("Digite sua pergunta")
 
-        st.dataframe(consolidated_df.head())
+        if st.button("Enviar para Perplexity") and pergunta:
+            prompt = summary + "\n\nPergunta: " + pergunta
+            resposta = chat([HumanMessage(content=prompt)])
+            st.markdown("### Resposta:")
+            st.write(resposta)
+
         towrite = io.BytesIO()
-        consolidated_df.to_excel(towrite, index=False, engine='openpyxl')
+        consolidated_df.to_excel(towrite, index=False, engine="openpyxl")
         towrite.seek(0)
         st.download_button(
-            "Download Excel Consolidado",
+            "Baixar planilha consolidada",
             towrite,
-            "consolidado_vr.xlsx",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            file_name="consolidado.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+else:
+    st.info("Envie os arquivos Excel para iniciar.")
