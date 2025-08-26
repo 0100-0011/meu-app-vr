@@ -3,7 +3,7 @@ import pandas as pd
 import io
 from langchain_perplexity import ChatPerplexity
 
-# Cria cliente com chave segura
+# Cria cliente com chave segurasssss
 chat = ChatPerplexity(
     temperature=0,
     pplx_api_key=st.secrets["pplx_api_key"],
