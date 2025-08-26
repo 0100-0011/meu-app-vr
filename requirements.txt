@@ -4,3 +4,7 @@
 ├── requirements.txt
 └── README.md
 
+streamlit
+pandas
+openpyxl
+requests
