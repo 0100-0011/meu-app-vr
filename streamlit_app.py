@@ -7,7 +7,7 @@ import requests
 def call_perplexity_api(prompt: str) -> str:
     api_key = st.secrets["PERPLEXITY_API_KEY"]
     headers = {"Authorization": f"Bearer {api_key}"}
-    url = "https://api.perplexity.ai/your-endpoint"
+    url = "https://api.perplexity.ai/chat/completions"
     data = {"query": prompt}
     response = requests.post(url, json=data, headers=headers)
     response.raise_for_status()
