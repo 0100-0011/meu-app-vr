@@ -4,3 +4,4 @@ openpyxl
 requests
 langchain
 langchain_perplexity
+#Texte
