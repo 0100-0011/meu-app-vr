@@ -3,7 +3,7 @@ import pandas as pd
 import io
 import json
 from langchain_perplexity import ChatPerplexity
-from langchain_core.messages import SystemMessage, HumanMessage
+
 
 def carregar_excel_arquivos(file_buffers):
     dataframes = {}
@@ -12,6 +12,7 @@ def carregar_excel_arquivos(file_buffers):
         df = pd.read_excel(f)
         dataframes[nome] = df
     return dataframes
+
 
 def consolidar_bases(dataframes):
     if 'ATIVOS' not in dataframes:
@@ -94,6 +95,7 @@ def consolidar_bases(dataframes):
 
     return consolidated_df
 
+
 def calcular_vr(df):
     valores_por_estado = {
         'Paraná': 35.0,
@@ -127,6 +129,7 @@ def calcular_vr(df):
 
     return df
 
+
 def gerar_vr_com_langchain(consolidated_df):
     system_msg = "Você é um assistente especializado em RH e folha de pagamento."
     resumo_texto = (
@@ -137,9 +140,10 @@ def gerar_vr_com_langchain(consolidated_df):
     )
     dados = consolidated_df.head(20).to_dict(orient='records')
 
+    # 🔹 ChatPerplexity aceita lista de dicts, não SystemMessage/HumanMessage
     messages = [
-        SystemMessage(content=system_msg),
-        HumanMessage(content=f"{resumo_texto}\n\nDados: {dados}")
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": f"{resumo_texto}\n\nDados: {dados}"}
     ]
 
     pplx_api_key = st.secrets["PPLX_API_KEY"]
@@ -160,6 +164,7 @@ def gerar_vr_com_langchain(consolidated_df):
     except Exception as e:
         st.warning(f"Erro ao interpretar resposta do LLM, usando cálculo local. Erro: {e}")
         return calcular_vr(consolidated_df)
+
 
 def main():
     st.title("Calculadora Automática de VR Mensal com LangChain e Perplexity")
@@ -197,6 +202,7 @@ def main():
                     file_name="VR_Mensal_Final.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
+
 
 if __name__ == "__main__":
     main()
