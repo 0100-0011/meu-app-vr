@@ -4,64 +4,64 @@ import io
 from langchain_perplexity import ChatPerplexity
 from langchain_core.messages import HumanMessage
 
-st.title("App Automação VR com Perguntas e Geração de Planilha Final")
+st.title("App Automação VR com Consolidação Segura e IA")
 
 dataframes = {}
 uploaded_files = st.file_uploader(
     "Carregue arquivos Excel", type="xlsx", accept_multiple_files=True
 )
 
+def clean_columns(df):
+    """Remove espaços e padroniza nomes das colunas para maiúsculas sem espaços no início/fim."""
+    df.columns = df.columns.str.strip()
+    return df
+
 if uploaded_files:
     for f in uploaded_files:
         df_name = f.name.split(".")[0].upper()
-        dataframes[df_name] = pd.read_excel(f)
-    st.success("Arquivos carregados com sucesso!")
+        df = pd.read_excel(f)
+        df = clean_columns(df)  # Limpa colunas ao carregar
+        dataframes[df_name] = df
+    st.success("Arquivos carregados e limpos com sucesso!")
 
     # Consolidação dos dados
-    consolidated_df = dataframes['ATIVOS'].copy()
+    consolidated_df = clean_columns(dataframes['ATIVOS'].copy())
 
     # Unifica FERIAS
     if 'FERIAS' in dataframes:
         ferias_cols = ['MATRICULA', 'DESC. SITUACAO', 'DIAS DE FERIAS']
-        consolidated_df = pd.merge(consolidated_df, dataframes['FERIAS'][ferias_cols], on='MATRICULA', how='left', suffixes=('', '_FERIAS'))
+        ferias_df = clean_columns(dataframes['FERIAS'][ferias_cols])
+        consolidated_df = pd.merge(consolidated_df, ferias_df, on='MATRICULA', how='left', suffixes=('', '_FERIAS'))
 
     # Unifica DESLIGADOS
     if 'DESLIGADOS' in dataframes:
-        desligados_cols = ['MATRICULA ', 'DATA DEMISSÃO', 'COMUNICADO DE DESLIGAMENTO']
-        consolidated_df = pd.merge(consolidated_df, dataframes['DESLIGADOS'][desligados_cols], left_on='MATRICULA', right_on='MATRICULA ', how='left', suffixes=('', '_DESLIGADOS'))
-        consolidated_df.drop('MATRICULA ', axis=1, inplace=True)
+        desligados_cols = ['MATRICULA', 'DATA DEMISSÃO', 'COMUNICADO DE DESLIGAMENTO']
+        desligados_df = clean_columns(dataframes['DESLIGADOS'][desligados_cols])
+        consolidated_df = pd.merge(consolidated_df, desligados_df, on='MATRICULA', how='left', suffixes=('', '_DESLIGADOS'))
 
     # Unifica ADMISSAO_ABRIL
     if 'ADMISSAO_ABRIL' in dataframes:
         admissao_cols = ['MATRICULA', 'Admissão', 'Cargo', 'SITUAÇÃO']
-        consolidated_df = pd.merge(consolidated_df, dataframes['ADMISSAO_ABRIL'][admissao_cols], on='MATRICULA', how='left', suffixes=('', '_ADMISSAO'))
+        admissao_df = clean_columns(dataframes['ADMISSAO_ABRIL'][admissao_cols])
+        consolidated_df = pd.merge(consolidated_df, admissao_df, on='MATRICULA', how='left', suffixes=('', '_ADMISSAO'))
 
-    # Unifica DIAS_UTEIS - proteções contra KeyError
+    # Unifica DIAS_UTEIS
     if 'DIAS_UTEIS' in dataframes:
-        dias_uteis_df = dataframes['DIAS_UTEIS'].rename(columns={'SINDICADO': 'Sindicato'})
-        dias_uteis_df.columns = dias_uteis_df.columns.str.strip()  # remove espaços
-
-        coluna_dias_uteis = None
-        for col in dias_uteis_df.columns:
-            if col.upper().startswith("DIAS UTEIS"):
-                coluna_dias_uteis = col
-                break
-
-        if coluna_dias_uteis:
-            dias_uteis_df.rename(columns={coluna_dias_uteis: 'DIAS_UTEIS'}, inplace=True)
-            cols_para_merge = ['Sindicato', 'DIAS_UTEIS']
+        dias_uteis_df = clean_columns(dataframes['DIAS_UTEIS'])
+        dias_uteis_df.rename(columns={'SINDICADO': 'Sindicato'}, inplace=True)
+        # Procurar por coluna de dias uteis com nome variável
+        dias_cols_candidates = [col for col in dias_uteis_df.columns if 'DIAS UTEIS' in col.upper()]
+        if dias_cols_candidates:
+            dias_uteis_df.rename(columns={dias_cols_candidates[0]: 'DIAS_UTEIS'}, inplace=True)
+            dias_uteis_cols = ['Sindicato', 'DIAS_UTEIS']
         else:
-            # Caso não encontre a coluna esperada, só usa 'Sindicato'
-            cols_para_merge = ['Sindicato']
+            dias_uteis_cols = ['Sindicato']
 
-        # Garantir que todas as colunas existam antes do merge
-        cols_para_merge = [c for c in cols_para_merge if c in dias_uteis_df.columns]
-
-        consolidated_df = pd.merge(consolidated_df, dias_uteis_df[cols_para_merge], on='Sindicato', how='left')
+        dias_uteis_cols = [col for col in dias_uteis_cols if col in dias_uteis_df.columns]
+        consolidated_df = pd.merge(consolidated_df, dias_uteis_df[dias_uteis_cols], on='Sindicato', how='left')
 
     st.markdown("### Dados consolidados prontos.")
 
-    # Exemplo para pergunta à IA e geração do arquivo final conforme solicitado anteriormente
     pergunta = st.text_input("Pergunte sobre os dados da planilha")
 
     chat = ChatPerplexity(
@@ -83,19 +83,27 @@ if uploaded_files:
 
     if st.button("Gerar e baixar planilha final VR"):
         calc_df = consolidated_df.copy()
+        # Padronizar colunas para evitar KeyError
+        calc_df.columns = calc_df.columns.str.strip()
+        # Determinar a coluna 'Total_VR' ou alternativa
+        if 'Total_VR' not in calc_df.columns and 'TOTAL' in calc_df.columns:
+            calc_df.rename(columns={'TOTAL': 'Total_VR'}, inplace=True)
 
-        calc_df['Custo Empresa'] = calc_df['Total_VR'] * 0.80
-        calc_df['Desconto profissional'] = calc_df['Total_VR'] * 0.20
+        # Cálculos
+        if 'Total_VR' in calc_df.columns:
+            calc_df['Custo Empresa'] = calc_df['Total_VR'] * 0.80
+            calc_df['Desconto profissional'] = calc_df['Total_VR'] * 0.20
+        else:
+            st.warning("Coluna 'Total_VR' não encontrada para calcular custos.")
 
-        calc_df = calc_df.rename(columns={
+        # Renomeações finais para layout
+        calc_df.rename(columns={
             'MATRICULA': 'Matrícula',
             'Sindicato': 'Sindicato do Colaborador',
             'Final_Working_Days': 'Dias',
             'VR_Daily_Value': 'VALOR DIÁRIO VR',
-            'Total_VR': 'TOTAL',
-            'Custo Empresa': 'Custo Empresa',
-            'Desconto profissional': 'Desconto profissional'
-        })
+            'Total_VR': 'TOTAL'
+        }, inplace=True)
 
         calc_df['Competência'] = '05.2025'
 
@@ -126,7 +134,12 @@ if uploaded_files:
             'OBS GERAIS'
         ]
 
-        final_df = calc_df[colunas_final]
+        if all(col in calc_df.columns for col in colunas_final):
+            final_df = calc_df[colunas_final]
+        else:
+            st.warning("Algumas colunas finais estão ausentes; exibindo as disponíveis.")
+            cols_disponiveis = [col for col in colunas_final if col in calc_df.columns]
+            final_df = calc_df[cols_disponiveis]
 
         towrite = io.BytesIO()
         final_df.to_excel(towrite, index=False, engine='openpyxl')
