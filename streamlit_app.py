@@ -4,7 +4,7 @@ import io
 from langchain_perplexity import ChatPerplexity
 
 # Token fixo da API (substitua pela sua chave válida)
-PPLX_API_KEY = "your_actual_api_key_here"
+PPLX_API_KEY = "pplx_api_key"
 
 def carregar_excel_arquivos(file_buffers):
     dataframes = {}
