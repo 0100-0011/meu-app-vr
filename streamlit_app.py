@@ -3,7 +3,6 @@ import pandas as pd
 import io
 from langchain_perplexity import ChatPerplexity
 
-# Função para carregar arquivos excel selecionados pelo usuário e retornar dicionário de dataframes
 def carregar_excel_arquivos(file_buffers):
     dataframes = {}
     for file_buffer in file_buffers:
@@ -12,23 +11,37 @@ def carregar_excel_arquivos(file_buffers):
         dataframes[nome] = df
     return dataframes
 
-# Função para consolidar os dataframes conforme regras do notebook de referência
 def consolidar_bases(dataframes):
     consolidated_df = dataframes['ATIVOS'].copy()
 
     if 'FERIAS' in dataframes:
         ferias_cols = ['MATRICULA', 'DESC. SITUACAO', 'DIAS DE FERIAS']
-        consolidated_df = pd.merge(consolidated_df, dataframes['FERIAS'][ferias_cols], on='MATRICULA', how='left')
+        consolidated_df = pd.merge(
+            consolidated_df,
+            dataframes['FERIAS'][ferias_cols],
+            on='MATRICULA',
+            how='left'
+        )
 
     if 'DESLIGADOS' in dataframes:
         desligados_cols = ['MATRICULA ', 'DATA DEMISSÃO', 'COMUNICADO DE DESLIGAMENTO']
-        consolidated_df = pd.merge(consolidated_df, dataframes['DESLIGADOS'][desligados_cols],
-                                   left_on='MATRICULA', right_on='MATRICULA ', how='left')
+        consolidated_df = pd.merge(
+            consolidated_df,
+            dataframes['DESLIGADOS'][desligados_cols],
+            left_on='MATRICULA',
+            right_on='MATRICULA ',
+            how='left'
+        )
         consolidated_df.drop(columns=['MATRICULA '], inplace=True)
 
     if 'ADMISSAO_ABRIL' in dataframes:
         admissao_cols = ['MATRICULA', 'Admissão', 'Cargo', 'SITUAÇÃO']
-        consolidated_df = pd.merge(consolidated_df, dataframes['ADMISSAO_ABRIL'][admissao_cols], on='MATRICULA', how='left')
+        consolidated_df = pd.merge(
+            consolidated_df,
+            dataframes['ADMISSAO_ABRIL'][admissao_cols],
+            on='MATRICULA',
+            how='left'
+        )
 
     if 'DIAS_UTEIS' in dataframes:
         dias_uteis_df = dataframes['DIAS_UTEIS'].copy()
@@ -39,7 +52,12 @@ def consolidar_bases(dataframes):
             dias_uteis_df['Sindicato'] = None
         required_cols = ['Sindicato', 'DIAS UTEIS (DE 15/04 a 15/05)']
         if all(col in dias_uteis_df.columns for col in required_cols):
-            consolidated_df = pd.merge(consolidated_df, dias_uteis_df[required_cols], on='Sindicato', how='left')
+            consolidated_df = pd.merge(
+                consolidated_df,
+                dias_uteis_df[required_cols],
+                on='Sindicato',
+                how='left'
+            )
         else:
             st.warning(f"Colunas {required_cols} não encontradas em DIAS_UTEIS. Pulando junção.")
 
@@ -50,10 +68,13 @@ def consolidar_bases(dataframes):
 
     if 'ESTAGIARIOS' in dataframes:
         adicionar_matriculas_para_exclusao(dataframes['ESTAGIARIOS'])
+
     if 'APRENDIZES' in dataframes:
         adicionar_matriculas_para_exclusao(dataframes['APRENDIZES'])
+
     if 'AFASTAMENTOS' in dataframes:
         adicionar_matriculas_para_exclusao(dataframes['AFASTAMENTOS'])
+
     if 'EXTERIOR' in dataframes:
         df_exterior = dataframes['EXTERIOR']
         if 'MATRICULA' in df_exterior.columns:
@@ -63,23 +84,28 @@ def consolidar_bases(dataframes):
         else:
             st.warning("Coluna de matrícula não encontrada em EXTERIOR para exclusão.")
 
-    consolidated_df = consolidated_df[~consolidated_df['MATRICULA'].astype(str).isin(exclusao_matriculas)]
+    consolidated_df = consolidated_df[
+        ~consolidated_df['MATRICULA'].astype(str).isin(exclusao_matriculas)
+    ]
 
     if 'Cargo' in consolidated_df.columns:
-        consolidated_df = consolidated_df[~consolidated_df['Cargo'].str.contains('diretor', case=False, na=False)]
+        consolidated_df = consolidated_df[
+            ~consolidated_df['Cargo'].str.contains('diretor', case=False, na=False)
+        ]
 
     return consolidated_df
 
-# Função corrigida para gerar VR via LangChain Perplexity com o formato correto de mensagens
 def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> pd.DataFrame:
     resumo_texto = (
-        "Calcule o Vale Refeição mensal para os colaboradores conforme os dados:\n"
-        "Sindicato, dias úteis, dias de férias, afastamentos, desligamentos, admissões e valor diário por sindicato.\n"
-        "Siga as regras de custo 80% empresa, 20% desconto profissional, proporcionalidade para desligados."
+        "Calcule o Vale Refeição mensal para os colaboradores conforme os dados abaixo:\n"
+        "Considere sindicato, dias úteis, dias de férias, afastamentos, desligamentos, admissões e valor diário por sindicato.\n"
+        "Use as regras de custo: 80% empresa, 20% desconto profissional e proporcionalidade para desligados.\n"
+        "Dados resumidos para contexto (primeiras 20 linhas):"
     )
     system_msg = "Você é um assistente especializado em RH e folha de pagamento."
-    dados_dict = consolidated_df.to_dict(orient='records')
-    user_msg = f"{resumo_texto}\nDados: {dados_dict}"
+
+    resumo_dados = consolidated_df.head(20).to_dict(orient='records')
+    user_msg = f"{resumo_texto}\n{resumo_dados}"
 
     chat = ChatPerplexity(temperature=0, pplx_api_key=pplx_api_key, model="sonar")
 
@@ -90,14 +116,16 @@ def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> 
 
     resposta = chat.invoke(messages)
 
-    # TODO: implementar parser da resposta para DataFrame com os cálculos de VR
-    return consolidated_df  # Retorna o dataframe original por enquanto
+    # TODO: implementar parser da resposta para DataFrame
+    return consolidated_df
 
 def main():
     st.title("Calculadora Automática de VR Mensal com LangChain e Perplexity")
     st.sidebar.header("Faça upload dos arquivos Excel necessários")
 
-    uploaded_files = st.sidebar.file_uploader("Selecione os arquivos", accept_multiple_files=True, type=['xlsx', 'xls'])
+    uploaded_files = st.sidebar.file_uploader(
+        "Selecione os arquivos", accept_multiple_files=True, type=['xlsx', 'xls']
+    )
 
     if uploaded_files:
         with st.spinner("Carregando e consolidando bases de dados..."):
@@ -122,7 +150,7 @@ def main():
                     label="Baixar arquivo Excel VR Mensal",
                     data=buffer,
                     file_name="VR_Mensal_Final.xlsx",
-                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
 if __name__ == "__main__":
