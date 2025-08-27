@@ -1,57 +1,39 @@
-from langchain import LLMChain, PromptTemplate
-from langchain.chat_models import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
-from langchain.callbacks import get_openai_callback
-from langchain.chat_models import ChatModel
-from langchain.llms import OpenAI
-from langchain.chat_models import ChatOpenAI
-from langchain_experimental.chat import ChatCompletion
-
+import streamlit as st
+import pandas as pd
+import io
 from langchain_perplexity import ChatPerplexity
 
-def gerar_resposta(llm, system_message, user_message):
-    messages = [
-        {"role": "system", "content": system_message},
-        {"role": "user", "content": user_message}
-    ]
-    # Chamando generate explicitamente com mensagens
-    response = llm.generate(messages)
-    return response.generations[0][0].text
+def carregar_excel_arquivos(file_buffers):
+    dataframes = {}
+    for f in file_buffers:
+        nome = f.name.split('.')[0]
+        df = pd.read_excel(f)
+        dataframes[nome] = df
+    return dataframes
 
-def gerar_vr_com_langchain(df):
-    # Construir prompt
-    sistema = "Você é um assistente especializado em RH e folha de pagamento."
-    user_content = f"Calcule o VR conforme as regras (80% empresa, 20% desconto), dado:\n{df.head(10).to_dict()}"
-
-    # Ler token
-    api_key = st.secrets["PPLX_API_KEY"]
-    llm = ChatPerplexity(temperature=0, openai_api_key=api_key, model="sonar")
-
-    resposta = gerar_resposta(llm, sistema, user_content)
-    # Aqui pode parsear resposta e aplicar no df
-    return df
-
-# Fluxo principal (similar ao seu código)
-def main():
-    st.title("Calculadora Automática VR")
-    files = st.file_uploader("Upload arquivos Excel", accept_multiple_files=True, type=["xls","xlsx"])
-    if files:
-        with st.spinner("Carregando..."):
-            data = carregar_arquivos(files)
-            consolidad = consolidar_bases(data)
-            st.dataframe(consolidad.head())
-
-        if st.button("Gerar VR"):
-            with st.spinner("Gerando VR..."):
-                resultado = gerar_vr_com_langchain(consolidad)
-                resultado = calcular_vr(resultado)
-                st.dataframe(resultado.head())
-                buffer = io.BytesIO()
-                resultado.to_excel(buffer, index=False)
-                buffer.seek(0)
-                st.download_button("Baixar Excel", data=buffer,
-                                   file_name="resultado_vr.xlsx",
-                                   mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-if __name__ == "__main__":
-    main()
+def consolidar_bases(dataframes):
+    df = dataframes['ATIVOS'].copy()
+    if 'FERIAS' in dataframes:
+        df = df.merge(dataframes['FERIAS'][['MATRICULA','DESC. SITUACAO','DIAS FERIAS']], on='MATRICULA', how='left')
+    if 'DESLIGADOS' in dataframes:
+        desligados = dataframes['DESLIGADOS'][['MATRICULA ','DATA DEMISSÃO','COMUNICADO DE DESLIGAMENTO']]
+        df = df.merge(desligados, left_on='MATRICULA', right_on='MATRICULA ', how='left').drop(columns=['MATRICULA '])
+    if 'ADMISSAO_ABRIL' in dataframes:
+        admissao = dataframes['ADMISSAO_ABRIL'][['MATRICULA','Admissão','Cargo','SITUAÇÃO']]
+        df = df.merge(admissao, on='MATRICULA', how='left')
+    if 'DIAS_UTEIS' in dataframes:
+        dias_uteis = dataframes['DIAS_UTEIS'].copy()
+        if 'SINDICADO' in dias_uteis.columns:
+            dias_uteis = dias_uteis.rename(columns={'SINDICADO':'Sindicato'})
+        if all(col in dias_uteis.columns for col in ['Sindicato','DIAS UTEIS (DE 15/04 a 15/05)']):
+            df = df.merge(dias_uteis[['Sindicato','DIAS UTEIS (DE 15/04 a 15/05)']], on='Sindicato', how='left')
+    exclusao = []
+    def coletar_matriculas(df_, col='MATRICULA'):
+        if df_ is not None and col in df_.columns:
+            exclusao.extend(df_[col].dropna().astype(str).tolist())
+    for tabela in ['ESTAGIARIOS','APRENDIZES','AFASTAMENTOS','EXTERIOR']:
+        if tabela in dataframes:
+            df_ = dataframes[tabela]
+            if 'MATRICULA' in df_.columns:
+                coletar_matriculas(df_)
+            elif 'Matrícula' in df_.
