@@ -75,16 +75,31 @@ def consolidar_bases(dataframes):
 
     # Aplicar exclusões: diretores, estagiários, aprendizes, afastados, exterior baseado em matrículas
     exclusao_matriculas = []
-    if 'ESTAGIARIOS' in dataframes:
-        exclusao_matriculas.extend(dataframes['ESTAGIARIOS']['MATRICULA'].tolist())
-    if 'APRENDIZES' in dataframes:
-        exclusao_matriculas.extend(dataframes['APRENDIZES']['MATRICULA'].tolist())
-    if 'AFASTAMENTOS' in dataframes:
-        exclusao_matriculas.extend(dataframes['AFASTAMENTOS']['MATRICULA'].tolist())
-    if 'EXTERIOR' in dataframes:
-        exclusao_matriculas.extend(dataframes['EXTERIOR']['MATRICULA'].tolist())
 
-    consolidated_df = consolidated_df[~consolidated_df['MATRICULA'].isin(exclusao_matriculas)]
+    def adicionar_matriculas_para_exclusao(df, col_name='MATRICULA'):
+        if df is not None and col_name in df.columns:
+            exclusao_matriculas.extend(df[col_name].dropna().astype(str).tolist())
+
+    if 'ESTAGIARIOS' in dataframes:
+        adicionar_matriculas_para_exclusao(dataframes['ESTAGIARIOS'])
+
+    if 'APRENDIZES' in dataframes:
+        adicionar_matriculas_para_exclusao(dataframes['APRENDIZES'])
+
+    if 'AFASTAMENTOS' in dataframes:
+        adicionar_matriculas_para_exclusao(dataframes['AFASTAMENTOS'])
+
+    if 'EXTERIOR' in dataframes:
+        df_exterior = dataframes['EXTERIOR']
+        if 'MATRICULA' in df_exterior.columns:
+            adicionar_matriculas_para_exclusao(df_exterior, 'MATRICULA')
+        elif 'Matrícula' in df_exterior.columns:
+            adicionar_matriculas_para_exclusao(df_exterior, 'Matrícula')
+        else:
+            st.warning("Coluna de matrícula não encontrada em EXTERIOR para exclusão.")
+
+    # Remover exclusões da base principal
+    consolidated_df = consolidated_df[~consolidated_df['MATRICULA'].astype(str).isin(exclusao_matriculas)]
 
     # Remover cargos diretores (se existir coluna Cargo)
     if 'Cargo' in consolidated_df.columns:
@@ -95,18 +110,16 @@ def consolidar_bases(dataframes):
 # Função para invocar LangChain com prompt para gerar VR mensal - placeholder retornando o DataFrame original
 def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> pd.DataFrame:
     resumo_texto = (
-        "Calcule o Vale Refeição mensal para os colaboradores conforme os dados:\n"
-        "Sindicato, dias úteis, dias de férias, afastamentos, desligamentos, admissões e valor diário por sindicato.\n"
+        "Calcule o Vale Refeição mensal para os colaboradores conforme os dados:\\n"
+        "Sindicato, dias úteis, dias de férias, afastamentos, desligamentos, admissões e valor diário por sindicato.\\n"
         "Siga as regras de custo 80% empresa, 20% desconto profissional, proporcionalidade para desligados."
     )
-
     system = "Você é um assistente especializado em RH e folha de pagamento."
     human = f"{resumo_texto} Dados: {consolidated_df.head(10).to_dict(orient='records')}"
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
     chat = ChatPerplexity(temperature=0, pplx_api_key=pplx_api_key, model="sonar")
     chain = prompt | chat
     resposta = chain.invoke({"input": human})
-
     # Em produção, implementar parser da resposta para DataFrame
     return consolidated_df
 
@@ -123,19 +136,16 @@ def main():
             consolidated_df = consolidar_bases(dataframes)
             st.write("### Dados consolidados após limpeza e exclusões:")
             st.dataframe(consolidated_df.head())
-
         pplx_api_key = st.sidebar.text_input("Chave API Perplexity", type="password")
         if pplx_api_key and st.button("Gerar VR Mensal com LangChain + Perplexity"):
             with st.spinner("Consultando LangChain + Perplexity e calculando VR..."):
                 vr_final_df = gerar_vr_com_langchain(consolidated_df, pplx_api_key)
                 st.write("### Planilha final calculada de VR para envio:")
                 st.dataframe(vr_final_df.head())
-
                 # Gerar arquivo Excel para download em memória via BytesIO
                 buffer = io.BytesIO()
                 vr_final_df.to_excel(buffer, index=False)
                 buffer.seek(0)
-
                 st.download_button(
                     label="Baixar arquivo Excel VR Mensal",
                     data=buffer,
