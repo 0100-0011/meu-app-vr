@@ -3,9 +3,6 @@ import pandas as pd
 import io
 from langchain_perplexity import ChatPerplexity
 
-# Token fixo da API (substitua pela sua chave válida)
-PPLX_API_KEY = "pplx_api_key"
-
 def carregar_excel_arquivos(file_buffers):
     dataframes = {}
     for file_buffer in file_buffers:
