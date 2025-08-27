@@ -16,7 +16,6 @@ def consolidar_bases(dataframes):
         st.error("Arquivo 'ATIVOS' não fornecido.")
         return None
     consolidated_df = dataframes['ATIVOS'].copy()
-
     # FERIAS
     if 'FERIAS' in dataframes:
         ferias_df = dataframes['FERIAS']
@@ -76,7 +75,6 @@ def consolidar_bases(dataframes):
     consolidated_df = consolidated_df.loc[~consolidated_df['MATRICULA'].astype(str).isin(exclusao_matriculas)]
     if 'Cargo' in consolidated_df.columns:
         consolidated_df = consolidated_df.loc[~consolidated_df['Cargo'].str.contains('diretor', case=False, na=False)]
-
     return consolidated_df
 
 def calcular_vr(df):
@@ -94,7 +92,6 @@ def calcular_vr(df):
     df['TOTAL VR'] = (df['VALOR DIÁRIO VR'] * df['DIAS TRABALHADOS']).clip(lower=0)
     df['Custo Empresa'] = df['TOTAL VR'] * 0.8
     df['Desconto profissional'] = df['TOTAL VR'] * 0.2
-
     def obs_gerais(row):
         obs = []
         if pd.notna(row.get('DATA DEMISSÃO')):
@@ -104,7 +101,6 @@ def calcular_vr(df):
         if pd.notna(row.get('SITUAÇÃO')):
             obs.append(f"Situação: {row['SITUAÇÃO']}")
         return '; '.join(obs)
-
     df['OBSERVAÇÕES'] = df.apply(obs_gerais, axis=1)
     return df
 
@@ -113,13 +109,13 @@ def gerar_vr_com_langchain(consolidated_df):
     resumo_texto = "Calcule o Vale Refeição mensal conforme regras de custo 80% empresa e 20% desconto profissional."
     dados = consolidated_df.head(20).to_dict(orient='records')
     messages = [
-        ("system", system_msg),
-        ("user", f"{resumo_texto} Dados: {dados}")
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": f"{resumo_texto} Dados: {dados}"}
     ]
     pplx_api_key = st.secrets["PPLX_API_KEY"]
     chat = ChatPerplexity(temperature=0, openai_api_key=pplx_api_key, model="sonar")
     resposta = chat.invoke(messages)
-    # TODO: implementar parsing da resposta se necessário
+    # TODO implementar parser da resposta e atualizar consolidated_df se necessário
     return consolidated_df
 
 def main():
@@ -131,6 +127,9 @@ def main():
         with st.spinner("Carregando e consolidando bases..."):
             dataframes = carregar_excel_arquivos(uploaded_files)
             consolidated_df = consolidar_bases(dataframes)
+            if consolidated_df is None:
+                st.error("Erro ao consolidar os dados. Verifique os arquivos enviados.")
+                return
             st.write("## Dados consolidados após limpeza e exclusões")
             st.dataframe(consolidated_df.head())
         if st.button("Gerar VR Mensal"):
@@ -148,5 +147,5 @@ def main():
                     file_name="VR_Mensal_Final.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
