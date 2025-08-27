@@ -18,7 +18,8 @@ def consolidar_bases(dataframes):
         consolidated_df = pd.merge(consolidated_df, dataframes['FERIAS'][ferias_cols], on='MATRICULA', how='left')
     if 'DESLIGADOS' in dataframes:
         desligados_cols = ['MATRICULA ', 'DATA DEMISSÃO', 'COMUNICADO DE DESLIGAMENTO']
-        consolidated_df = pd.merge(consolidated_df, dataframes['DESLIGADOS'][desligados_cols],
+        consolidated_df = pd.merge(consolidated_df,
+                                   dataframes['DESLIGADOS'][desligados_cols],
                                    left_on='MATRICULA', right_on='MATRICULA ', how='left')
         consolidated_df.drop(columns=['MATRICULA '], inplace=True)
     if 'ADMISSAO_ABRIL' in dataframes:
@@ -89,16 +90,15 @@ def calcular_vr(df):
 def gerar_vr_com_langchain(consolidated_df):
     system_msg = "Você é um assistente especializado em RH e folha de pagamento."
     resumo_texto = "Calcule o Vale Refeição mensal conforme regras de custo 80% empresa e 20% desconto profissional."
-    dados = consolidated_df.head(20).to_dict(orient='records') # limitar para evitar problemas no prompt
+    dados = consolidated_df.head(20).to_dict(orient='records')
     user_msg = f"{resumo_texto} Dados: {dados}"
-    pplx_api_key = st.secrets.get("PPLX_API_KEY")
-    chat = ChatPerplexity(temperature=0, pplx_api_key=pplx_api_key, model="sonar")
+    pplx_api_key = st.secrets["PPLX_API_KEY"]
+    chat = ChatPerplexity(temperature=0, openai_api_key=pplx_api_key, model="sonar")
     messages = [
         {"role": "system", "content": system_msg},
         {"role": "user", "content": user_msg}
     ]
     resposta = chat.invoke(messages)
-    # Parser da resposta poderia ser implementado aqui
     return consolidated_df
 
 def main():
