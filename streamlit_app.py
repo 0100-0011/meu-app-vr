@@ -4,6 +4,8 @@ import io
 from langchain_perplexity import ChatPerplexity
 from langchain_core.prompts import ChatPromptTemplate
 
+pplx_api_key="SUA_CHAVE_PERPLEXITY"
+
 # Função para carregar arquivos excel selecionados pelo usuário e retornar dicionário de dataframes
 def carregar_excel_arquivos(file_buffers):
     dataframes = {}
@@ -139,7 +141,7 @@ def main():
 
         # Botão único que pergunta chave API e executa geração junto
         if st.button("Gerar VR Mensal com LangChain + Perplexity"):
-            pplx_api_key = st.text_input("Chave API Perplexity", type="password", key="api_key_input")
+            ##pplx_api_key = st.text_input("Chave API Perplexity", type="password", key="api_key_input")
             if pplx_api_key:
                 with st.spinner("Consultando LangChain + Perplexity e calculando VR..."):
                     vr_final_df = gerar_vr_com_langchain(consolidated_df, pplx_api_key)
