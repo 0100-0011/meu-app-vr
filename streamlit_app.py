@@ -1,13 +1,11 @@
 import streamlit as st
 import pandas as pd
 import io
-import os
 from langchain_perplexity import ChatPerplexity
 from langchain_core.messages import HumanMessage
 
 st.title("App Automação VR com Perguntas e Geração de Planilha Final")
 
-# Mantém os dataframes carregados
 dataframes = {}
 uploaded_files = st.file_uploader(
     "Carregue arquivos Excel", type="xlsx", accept_multiple_files=True
@@ -19,7 +17,7 @@ if uploaded_files:
         dataframes[df_name] = pd.read_excel(f)
     st.success("Arquivos carregados com sucesso!")
 
-    # Consolidação dos dados conforme seu script original
+    # Consolidação dos dados
     consolidated_df = dataframes['ATIVOS'].copy()
 
     # Unifica FERIAS
@@ -31,25 +29,41 @@ if uploaded_files:
     if 'DESLIGADOS' in dataframes:
         desligados_cols = ['MATRICULA ', 'DATA DEMISSÃO', 'COMUNICADO DE DESLIGAMENTO']
         consolidated_df = pd.merge(consolidated_df, dataframes['DESLIGADOS'][desligados_cols], left_on='MATRICULA', right_on='MATRICULA ', how='left', suffixes=('', '_DESLIGADOS'))
-        consolidated_df = consolidated_df.drop('MATRICULA ', axis=1)
+        consolidated_df.drop('MATRICULA ', axis=1, inplace=True)
 
     # Unifica ADMISSAO_ABRIL
     if 'ADMISSAO_ABRIL' in dataframes:
         admissao_cols = ['MATRICULA', 'Admissão', 'Cargo', 'SITUAÇÃO']
         consolidated_df = pd.merge(consolidated_df, dataframes['ADMISSAO_ABRIL'][admissao_cols], on='MATRICULA', how='left', suffixes=('', '_ADMISSAO'))
 
-    # Unifica DIAS_UTEIS (renomeia para 'Sindicato')
+    # Unifica DIAS_UTEIS - proteções contra KeyError
     if 'DIAS_UTEIS' in dataframes:
         dias_uteis_df = dataframes['DIAS_UTEIS'].rename(columns={'SINDICADO': 'Sindicato'})
-        dias_uteis_cols = ['Sindicato', 'DIAS UTEIS (DE 15/04 a 15/05)']
-        consolidated_df = pd.merge(consolidated_df, dias_uteis_df[dias_uteis_cols], on='Sindicato', how='left')
+        dias_uteis_df.columns = dias_uteis_df.columns.str.strip()  # remove espaços
+
+        coluna_dias_uteis = None
+        for col in dias_uteis_df.columns:
+            if col.upper().startswith("DIAS UTEIS"):
+                coluna_dias_uteis = col
+                break
+
+        if coluna_dias_uteis:
+            dias_uteis_df.rename(columns={coluna_dias_uteis: 'DIAS_UTEIS'}, inplace=True)
+            cols_para_merge = ['Sindicato', 'DIAS_UTEIS']
+        else:
+            # Caso não encontre a coluna esperada, só usa 'Sindicato'
+            cols_para_merge = ['Sindicato']
+
+        # Garantir que todas as colunas existam antes do merge
+        cols_para_merge = [c for c in cols_para_merge if c in dias_uteis_df.columns]
+
+        consolidated_df = pd.merge(consolidated_df, dias_uteis_df[cols_para_merge], on='Sindicato', how='left')
 
     st.markdown("### Dados consolidados prontos.")
 
-    # Entrada para pergunta da IA
+    # Exemplo para pergunta à IA e geração do arquivo final conforme solicitado anteriormente
     pergunta = st.text_input("Pergunte sobre os dados da planilha")
 
-    # Instancia cliente Perplexity
     chat = ChatPerplexity(
         temperature=0,
         pplx_api_key=st.secrets["pplx_api_key"],
@@ -57,7 +71,6 @@ if uploaded_files:
     )
 
     if st.button("Consultar IA") and pergunta.strip() != "":
-        # Monta resumo básico para enviar à IA
         resumo = (
             f"Número total de funcionários: {len(consolidated_df)}\n"
             f"Colunas disponíveis: {list(consolidated_df.columns)}\n"
@@ -68,15 +81,12 @@ if uploaded_files:
         st.markdown("### Resposta da IA:")
         st.write(resposta.content)
 
-    # Botão para gerar e oferecer download da planilha final formatada
     if st.button("Gerar e baixar planilha final VR"):
         calc_df = consolidated_df.copy()
 
-        # Cálculo dos custos
         calc_df['Custo Empresa'] = calc_df['Total_VR'] * 0.80
         calc_df['Desconto profissional'] = calc_df['Total_VR'] * 0.20
 
-        # Renomeia colunas conforme especificado
         calc_df = calc_df.rename(columns={
             'MATRICULA': 'Matrícula',
             'Sindicato': 'Sindicato do Colaborador',
@@ -87,10 +97,8 @@ if uploaded_files:
             'Desconto profissional': 'Desconto profissional'
         })
 
-        # Adiciona coluna competência
-        calc_df['Competência'] = '05.2025'  # Pode ser parametrizado futuramente
+        calc_df['Competência'] = '05.2025'
 
-        # Cria coluna OBS GERAIS
         def gerar_obs(row):
             obs = []
             if pd.notna(row.get('DESC. SITUACAO_FERIAS')) and row['DESC. SITUACAO_FERIAS'] == 'Férias':
@@ -106,7 +114,6 @@ if uploaded_files:
 
         calc_df['OBS GERAIS'] = calc_df.apply(gerar_obs, axis=1)
 
-        # Seleciona e reordena colunas para saída final
         colunas_final = [
             'Matrícula',
             'Sindicato do Colaborador',
@@ -118,9 +125,9 @@ if uploaded_files:
             'Desconto profissional',
             'OBS GERAIS'
         ]
+
         final_df = calc_df[colunas_final]
 
-        # Criação do arquivo Excel para download
         towrite = io.BytesIO()
         final_df.to_excel(towrite, index=False, engine='openpyxl')
         towrite.seek(0)
