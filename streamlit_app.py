@@ -17,30 +17,21 @@ def consolidar_bases(dataframes):
     if 'FERIAS' in dataframes:
         ferias_cols = ['MATRICULA', 'DESC. SITUACAO', 'DIAS DE FERIAS']
         consolidated_df = pd.merge(
-            consolidated_df,
-            dataframes['FERIAS'][ferias_cols],
-            on='MATRICULA',
-            how='left'
+            consolidated_df, dataframes['FERIAS'][ferias_cols], on='MATRICULA', how='left'
         )
 
     if 'DESLIGADOS' in dataframes:
         desligados_cols = ['MATRICULA ', 'DATA DEMISSÃO', 'COMUNICADO DE DESLIGAMENTO']
         consolidated_df = pd.merge(
-            consolidated_df,
-            dataframes['DESLIGADOS'][desligados_cols],
-            left_on='MATRICULA',
-            right_on='MATRICULA ',
-            how='left'
+            consolidated_df, dataframes['DESLIGADOS'][desligados_cols],
+            left_on='MATRICULA', right_on='MATRICULA ', how='left'
         )
         consolidated_df.drop(columns=['MATRICULA '], inplace=True)
 
     if 'ADMISSAO_ABRIL' in dataframes:
         admissao_cols = ['MATRICULA', 'Admissão', 'Cargo', 'SITUAÇÃO']
         consolidated_df = pd.merge(
-            consolidated_df,
-            dataframes['ADMISSAO_ABRIL'][admissao_cols],
-            on='MATRICULA',
-            how='left'
+            consolidated_df, dataframes['ADMISSAO_ABRIL'][admissao_cols], on='MATRICULA', how='left'
         )
 
     if 'DIAS_UTEIS' in dataframes:
@@ -53,10 +44,7 @@ def consolidar_bases(dataframes):
         required_cols = ['Sindicato', 'DIAS UTEIS (DE 15/04 a 15/05)']
         if all(col in dias_uteis_df.columns for col in required_cols):
             consolidated_df = pd.merge(
-                consolidated_df,
-                dias_uteis_df[required_cols],
-                on='Sindicato',
-                how='left'
+                consolidated_df, dias_uteis_df[required_cols], on='Sindicato', how='left'
             )
         else:
             st.warning(f"Colunas {required_cols} não encontradas em DIAS_UTEIS. Pulando junção.")
@@ -68,13 +56,10 @@ def consolidar_bases(dataframes):
 
     if 'ESTAGIARIOS' in dataframes:
         adicionar_matriculas_para_exclusao(dataframes['ESTAGIARIOS'])
-
     if 'APRENDIZES' in dataframes:
         adicionar_matriculas_para_exclusao(dataframes['APRENDIZES'])
-
     if 'AFASTAMENTOS' in dataframes:
         adicionar_matriculas_para_exclusao(dataframes['AFASTAMENTOS'])
-
     if 'EXTERIOR' in dataframes:
         df_exterior = dataframes['EXTERIOR']
         if 'MATRICULA' in df_exterior.columns:
@@ -94,6 +79,35 @@ def consolidar_bases(dataframes):
         ]
 
     return consolidated_df
+
+def calcular_vr(df):
+    # Exemplo de valor diário por sindicato (pode ser ajustado conforme fonte real)
+    valor_diario_por_sindicato = {
+        "Sindicato A": 30.0,
+        "Sindicato B": 28.5,
+        "Sindicato C": 25.0,
+    }
+    # Se não encontrado sindicato, usar valor padrão
+    valor_padrao = 27.0
+
+    # Criar coluna VALOR DIÁRIO VR
+    df['VALOR DIÁRIO VR'] = df['Sindicato'].map(valor_diario_por_sindicato).fillna(valor_padrao)
+
+    # Calcular dias trabalhados = DIAS UTEIS - DIAS DE FERIAS (ajustar nomes conforme colunas)
+    df['DIAS DE FERIAS'] = df['DIAS DE FERIAS'].fillna(0)
+    df['DIAS UTEIS (DE 15/04 a 15/05)'] = df['DIAS UTEIS (DE 15/04 a 15/05)'].fillna(0)
+    df['DIAS TRABALHADOS'] = df['DIAS UTEIS (DE 15/04 a 15/05)'] - df['DIAS DE FERIAS']
+
+    # Calcular TOTAL = VALOR DIÁRIO VR * DIAS TRABALHADOS (mínimo zero)
+    df['TOTAL'] = (df['VALOR DIÁRIO VR'] * df['DIAS TRABALHADOS']).clip(lower=0)
+
+    # Aplicar regra: Custo Empresa = 80% do TOTAL
+    df['Custo Empresa'] = df['TOTAL'] * 0.8
+
+    # Aplicar regra: Desconto profissional = 20% do TOTAL
+    df['Desconto profissional'] = df['TOTAL'] * 0.2
+
+    return df
 
 def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> pd.DataFrame:
     resumo_texto = (
@@ -116,8 +130,9 @@ def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> 
 
     resposta = chat.invoke(messages)
 
-    # TODO: implementar parser da resposta para DataFrame
-    return consolidated_df
+    # Aqui pode implementar parser para resposta se desejar
+    df_completo = calcular_vr(consolidated_df)
+    return df_completo
 
 def main():
     st.title("Calculadora Automática de VR Mensal com LangChain e Perplexity")
