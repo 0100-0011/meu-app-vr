@@ -195,4 +195,8 @@ def main():
                     label="Baixar arquivo Excel VR Mensal",
                     data=buffer,
                     file_name="VR_Mensal_Final.xlsx",
-                    mime="application/vnd.openxmlformats-off
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+
+if __name__ == "__main__":
+    main()
