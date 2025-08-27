@@ -115,7 +115,7 @@ def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> 
         "Siga as regras de custo 80% empresa, 20% desconto profissional, proporcionalidade para desligados."
     )
     system = "Você é um assistente especializado em RH e folha de pagamento."
-    human = f"{resumo_texto} Dados: {consolidated_df.head(10).to_dict(orient='records')}"
+    human = f"{resumo_texto} Dados: {consolidated_df.head().to_dict(orient='records')}"
     prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
     chat = ChatPerplexity(temperature=0, pplx_api_key=pplx_api_key, model="sonar")
     chain = prompt | chat
@@ -136,7 +136,7 @@ def main():
             consolidated_df = consolidar_bases(dataframes)
             st.write("### Dados consolidados após limpeza e exclusões:")
             st.dataframe(consolidated_df.head())
-        pplx_api_key = st.sidebar.text_input("Chave API Perplexity", type="password")
+       # pplx_api_key = st.sidebar.text_input("Chave API Perplexity", type="password")
         if pplx_api_key and st.button("Gerar VR Mensal com LangChain + Perplexity"):
             with st.spinner("Consultando LangChain + Perplexity e calculando VR..."):
                 vr_final_df = gerar_vr_com_langchain(consolidated_df, pplx_api_key)
