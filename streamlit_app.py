@@ -62,7 +62,9 @@ def consolidar_bases(dataframes):
 # Função para invocar LangChain com prompt para gerar VR mensal conforme regras, passando dados consolidados como contexto resumido ou prompt
 def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> pd.DataFrame:
     # Preparar texto com resumo dos dados essenciais (exemplo, limitado para contexto)
-    resumo_texto = f\"\"\"Calcule o Vale Refeição mensal para os colaboradores conforme os dados: Sindicato, dias úteis, dias de férias, afastamentos, desligamentos, admissões e valor diário por sindicato. Siga as regras de custo 80% empresa, 20% desconto profissional, proporcionalidade para desligados.\"\"\"
+    resumo_texto = f\"\"\"Calcule o Vale Refeição mensal para os colaboradores conforme os dados:
+Sindicato, dias úteis, dias de férias, afastamentos, desligamentos, admissões e valor diário por sindicato.
+Siga as regras de custo 80% empresa, 20% desconto profissional, proporcionalidade para desligados.\"\"\"
 
     # Prompt para o LLM
     system = \"Você é um assistente especializado em RH e folha de pagamento.\"
