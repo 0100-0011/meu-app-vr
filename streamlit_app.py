@@ -140,7 +140,7 @@ def gerar_vr_com_langchain(consolidated_df):
     )
     dados = consolidated_df.head(20).to_dict(orient='records')
 
-    # 🔹 ChatPerplexity aceita lista de dicts, não SystemMessage/HumanMessage
+    # monta as mensagens no formato correto
     messages = [
         {"role": "system", "content": system_msg},
         {"role": "user", "content": f"{resumo_texto}\n\nDados: {dados}"}
@@ -149,16 +149,18 @@ def gerar_vr_com_langchain(consolidated_df):
     pplx_api_key = st.secrets["PPLX_API_KEY"]
 
     chat = ChatPerplexity(temperature=0, openai_api_key=pplx_api_key, model="sonar")
-    resposta = chat.invoke(messages)
+
+    # 🔑 Aqui está a mudança → usamos .generate() em vez de .invoke()
+    resposta = chat.generate([messages])
 
     st.write("### Resposta bruta do LLM")
     st.write(resposta)
 
-    # Parser seguro
+    # Extrai conteúdo corretamente do retorno
     try:
-        parsed = json.loads(resposta.content)
+        resposta_texto = resposta.generations[0][0].text
+        parsed = json.loads(resposta_texto)
         df_llm = pd.DataFrame(parsed)
-        # Faz merge com os dados originais pelo campo MATRÍCULA
         consolidated_df = consolidated_df.merge(df_llm, on="MATRICULA", how="left")
         return consolidated_df
     except Exception as e:
