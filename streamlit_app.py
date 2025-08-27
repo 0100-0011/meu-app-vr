@@ -24,7 +24,7 @@ def consolidar_bases(dataframes):
 
     # Junção DESLIGADOS
     if 'DESLIGADOS' in dataframes:
-        desligados_cols = ['MATRICULA ', 'DATA DEMISSÃO', 'COMUNICADO DE DESLIGAMENTO']
+        desligados_cols = ['MATRICULA ', 'DATA DEMISSÃO', 'COMUNICADO DE DESLIGAMENTO']  # note the trailing space in 'MATRICULA '
         consolidated_df = pd.merge(consolidated_df, dataframes['DESLIGADOS'][desligados_cols], left_on='MATRICULA', right_on='MATRICULA ', how='left')
         consolidated_df.drop(columns=['MATRICULA '], inplace=True)
 
@@ -62,18 +62,17 @@ def consolidar_bases(dataframes):
 # Função para invocar LangChain com prompt para gerar VR mensal conforme regras, passando dados consolidados como contexto resumido ou prompt
 def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> pd.DataFrame:
     # Preparar texto com resumo dos dados essenciais (exemplo, limitado para contexto)
-    resumo_texto = f\"\"\"Calcule o Vale Refeição mensal para os colaboradores conforme os dados:
+    resumo_texto = f"""Calcule o Vale Refeição mensal para os colaboradores conforme os dados:
 Sindicato, dias úteis, dias de férias, afastamentos, desligamentos, admissões e valor diário por sindicato.
-Siga as regras de custo 80% empresa, 20% desconto profissional, proporcionalidade para desligados.\"\"\"
-
+Siga as regras de custo 80% empresa, 20% desconto profissional, proporcionalidade para desligados."""
+    
     # Prompt para o LLM
-    system = \"Você é um assistente especializado em RH e folha de pagamento.\"
-    human = f\"{resumo_texto} Dados: {consolidated_df.head(10).to_dict(orient='records')}\"  # Limitar para exemplo
-
-    prompt = ChatPromptTemplate.from_messages([(\"system\", system), (\"human\", human)])
-    chat = ChatPerplexity(temperature=0, pplx_api_key=pplx_api_key, model=\"sonar\")
+    system = "Você é um assistente especializado em RH e folha de pagamento."
+    human = f"{resumo_texto} Dados: {consolidated_df.head(10).to_dict(orient='records')}"  # Limitar para exemplo
+    prompt = ChatPromptTemplate.from_messages([("system", system), ("human", human)])
+    chat = ChatPerplexity(temperature=0, pplx_api_key=pplx_api_key, model="sonar")
     chain = prompt | chat
-    resposta = chain.invoke({\"input\": human})
+    resposta = chain.invoke({"input": human})
     
     # Aqui deveria haver parsing da resposta para um dataframe estruturado
     # Como placeholder, retornamos o DataFrame original para fluxo
@@ -82,31 +81,31 @@ Siga as regras de custo 80% empresa, 20% desconto profissional, proporcionalidad
 
 # Streamlit interface
 def main():
-    st.title(\"Calculadora Automática de VR Mensal com LangChain e Perplexity\")
+    st.title("Calculadora Automática de VR Mensal com LangChain e Perplexity")
 
     # Upload dos arquivos Excel
-    st.sidebar.header(\"Faça upload dos arquivos Excel necessários\")
-    uploaded_files = st.sidebar.file_uploader(\"Selecione os arquivos\", accept_multiple_files=True, type=['xlsx', 'xls'])
-    
+    st.sidebar.header("Faça upload dos arquivos Excel necessários")
+    uploaded_files = st.sidebar.file_uploader("Selecione os arquivos", accept_multiple_files=True, type=['xlsx', 'xls'])
+
     if uploaded_files:
-        with st.spinner(\"Carregando e consolidando bases de dados...\"):
+        with st.spinner("Carregando e consolidando bases de dados..."):
             dataframes = carregar_excel_arquivos(uploaded_files)
             consolidated_df = consolidar_bases(dataframes)
-            st.write(\"### Dados consolidados após limpeza e exclusões:\")
+            st.write("### Dados consolidados após limpeza e exclusões:")
             st.dataframe(consolidated_df.head())
 
         # API Key para LangChain Perplexity
-        pplx_api_key = st.sidebar.text_input(\"Chave API Perplexity\", type=\"password\")
-        
-        if pplx_api_key and st.button(\"Gerar VR Mensal com LangChain + Perplexity\"):
-            with st.spinner(\"Consultando LangChain + Perplexity e calculando VR...\"):
+        pplx_api_key = st.sidebar.text_input("Chave API Perplexity", type="password")
+
+        if pplx_api_key and st.button("Gerar VR Mensal com LangChain + Perplexity"):
+            with st.spinner("Consultando LangChain + Perplexity e calculando VR..."):
                 vr_final_df = gerar_vr_com_langchain(consolidated_df, pplx_api_key)
-                st.write(\"### Planilha final calculada de VR para envio:\")
+                st.write("### Planilha final calculada de VR para envio:")
                 st.dataframe(vr_final_df.head())
-                
+
                 # Permitir download em excel
                 excel_bytes = vr_final_df.to_excel(index=False)
-                st.download_button(label=\"Baixar arquivo Excel VR Mensal\", data=excel_bytes, file_name=\"VR_Mensal_Final.xlsx\", mime='application/vnd.ms-excel')
+                st.download_button(label="Baixar arquivo Excel VR Mensal", data=excel_bytes, file_name="VR_Mensal_Final.xlsx", mime='application/vnd.ms-excel')
 
-if __name__ == \"__main__\":
+if __name__ == "__main__":
     main()
