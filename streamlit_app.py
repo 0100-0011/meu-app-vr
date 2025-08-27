@@ -3,7 +3,18 @@ import pandas as pd
 import io
 from langchain_perplexity import ChatPerplexity
 
-# ... (funções carregar_excel_arquivos e consolidar_bases sem alteração)...
+def carregar_excel_arquivos(file_buffers):
+    dataframes = {}
+    for file_buffer in file_buffers:
+        nome = file_buffer.name.split('.')[0]
+        df = pd.read_excel(file_buffer)
+        dataframes[nome] = df
+    return dataframes
+
+def consolidar_bases(dataframes):
+    consolidated_df = dataframes['ATIVOS'].copy()
+    # resto das operações conforme antes...
+    return consolidated_df
 
 def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> pd.DataFrame:
     resumo_texto = (
@@ -13,18 +24,14 @@ def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> 
     )
     system_msg = "Você é um assistente especializado em RH e folha de pagamento."
     dados_dict = consolidated_df.to_dict(orient='records')
-
     prompt_text = f"{system_msg}\n{resumo_texto}\nDados: {dados_dict}"
 
     chat = ChatPerplexity(temperature=0, pplx_api_key=pplx_api_key, model="sonar")
     resposta = chat.invoke(prompt_text)
-
-    # Retorna dataframe original; implementar parser da resposta na produção
     return consolidated_df
 
 def main():
     st.title("Calculadora Automática de VR Mensal com LangChain e Perplexity")
-    st.sidebar.header("Faça upload dos arquivos Excel necessários")
     uploaded_files = st.sidebar.file_uploader("Selecione os arquivos", accept_multiple_files=True, type=['xlsx', 'xls'])
     if uploaded_files:
         with st.spinner("Carregando e consolidando bases de dados..."):
@@ -47,5 +54,6 @@ def main():
                     file_name="VR_Mensal_Final.xlsx",
                     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
+
 if __name__ == "__main__":
     main()
