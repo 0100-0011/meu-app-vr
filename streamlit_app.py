@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+import json
 from langchain_perplexity import ChatPerplexity
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -128,12 +129,17 @@ def calcular_vr(df):
 
 def gerar_vr_com_langchain(consolidated_df):
     system_msg = "Você é um assistente especializado em RH e folha de pagamento."
-    resumo_texto = "Calcule o Vale Refeição mensal conforme regras de custo 80% empresa e 20% desconto profissional."
+    resumo_texto = (
+        "Calcule o Vale Refeição mensal conforme regras: "
+        "80% custo empresa, 20% desconto profissional. "
+        "Responda apenas em JSON no formato: "
+        "[{\"MATRICULA\": \"...\", \"DIAS_TRABALHADOS\": 20, \"TOTAL_VR\": 600, \"CUSTO_EMPRESA\": 480, \"DESCONTO\": 120}]"
+    )
     dados = consolidated_df.head(20).to_dict(orient='records')
 
     messages = [
         SystemMessage(content=system_msg),
-        HumanMessage(content=f"{resumo_texto} Dados: {dados}")
+        HumanMessage(content=f"{resumo_texto}\n\nDados: {dados}")
     ]
 
     pplx_api_key = st.secrets["PPLX_API_KEY"]
@@ -141,11 +147,19 @@ def gerar_vr_com_langchain(consolidated_df):
     chat = ChatPerplexity(temperature=0, openai_api_key=pplx_api_key, model="sonar")
     resposta = chat.invoke(messages)
 
-    # Debug - mostrar resposta do LLM
-    st.write("### Resposta LLM")
+    st.write("### Resposta bruta do LLM")
     st.write(resposta)
 
-    return consolidated_df
+    # Parser seguro
+    try:
+        parsed = json.loads(resposta.content)
+        df_llm = pd.DataFrame(parsed)
+        # Faz merge com os dados originais pelo campo MATRÍCULA
+        consolidated_df = consolidated_df.merge(df_llm, on="MATRICULA", how="left")
+        return consolidated_df
+    except Exception as e:
+        st.warning(f"Erro ao interpretar resposta do LLM, usando cálculo local. Erro: {e}")
+        return calcular_vr(consolidated_df)
 
 def main():
     st.title("Calculadora Automática de VR Mensal com LangChain e Perplexity")
@@ -168,8 +182,7 @@ def main():
 
         if st.button("Gerar VR Mensal"):
             with st.spinner("Processando cálculo do Vale Refeição..."):
-                df_langchain = gerar_vr_com_langchain(consolidated_df)
-                resultado_df = calcular_vr(df_langchain)
+                resultado_df = gerar_vr_com_langchain(consolidated_df)
 
                 st.write("## Planilha final com cálculos de VR")
                 st.dataframe(resultado_df.head())
