@@ -27,7 +27,7 @@ def consolidar_bases(dataframes):
             left_on='MATRICULA', right_on='MATRICULA ', how='left'
         )
         consolidated_df.drop(columns=['MATRICULA '], inplace=True)
-
+    
     if 'ADMISSAO_ABRIL' in dataframes:
         admissao_cols = ['MATRICULA', 'Admissão', 'Cargo', 'SITUAÇÃO']
         consolidated_df = pd.merge(
@@ -68,7 +68,6 @@ def consolidar_bases(dataframes):
             adicionar_matriculas_para_exclusao(df_exterior, 'Matrícula')
         else:
             st.warning("Coluna de matrícula não encontrada em EXTERIOR para exclusão.")
-
     consolidated_df = consolidated_df[
         ~consolidated_df['MATRICULA'].astype(str).isin(exclusao_matriculas)
     ]
@@ -81,84 +80,66 @@ def consolidar_bases(dataframes):
     return consolidated_df
 
 def calcular_vr(df):
-    # Exemplo de valor diário por sindicato (pode ser ajustado conforme fonte real)
+    # Define valor diário por sindicato - exemplo fixo, ajuste conforme necessário
     valor_diario_por_sindicato = {
-        "Sindicato A": 30.0,
-        "Sindicato B": 28.5,
-        "Sindicato C": 25.0,
+        'Sindicato A': 30.0,
+        'Sindicato B': 28.5,
+        'Sindicato C': 25.0,
     }
-    # Se não encontrado sindicato, usar valor padrão
     valor_padrao = 27.0
 
-    # Criar coluna VALOR DIÁRIO VR
     df['VALOR DIÁRIO VR'] = df['Sindicato'].map(valor_diario_por_sindicato).fillna(valor_padrao)
-
-    # Calcular dias trabalhados = DIAS UTEIS - DIAS DE FERIAS (ajustar nomes conforme colunas)
     df['DIAS DE FERIAS'] = df['DIAS DE FERIAS'].fillna(0)
     df['DIAS UTEIS (DE 15/04 a 15/05)'] = df['DIAS UTEIS (DE 15/04 a 15/05)'].fillna(0)
     df['DIAS TRABALHADOS'] = df['DIAS UTEIS (DE 15/04 a 15/05)'] - df['DIAS DE FERIAS']
 
-    # Calcular TOTAL = VALOR DIÁRIO VR * DIAS TRABALHADOS (mínimo zero)
-    df['TOTAL'] = (df['VALOR DIÁRIO VR'] * df['DIAS TRABALHADOS']).clip(lower=0)
+    # Total VR
+    df['TOTAL VR'] = (df['VALOR DIÁRIO VR'] * df['DIAS TRABALHADOS']).clip(lower=0)
 
-    # Aplicar regra: Custo Empresa = 80% do TOTAL
-    df['Custo Empresa'] = df['TOTAL'] * 0.8
+    # Calcula Custo Empresa e Desconto Profissional
+    df['Custo Empresa'] = df['TOTAL VR'] * 0.8
+    df['Desconto profissional'] = df['TOTAL VR'] * 0.2
 
-    # Aplicar regra: Desconto profissional = 20% do TOTAL
-    df['Desconto profissional'] = df['TOTAL'] * 0.2
+    # Coluna de observações gerais
+    def obs_gerais(row):
+        obs = []
+        if row.get('DATA DEMISSÃO'):
+            obs.append(f"Desligado em {row['DATA DEMISSÃO']}")
+        if row.get('COMUNICADO DE DESLIGAMENTO'):
+            obs.append(f"Comunicado: {row['COMUNICADO DE DESLIGAMENTO']}")
+        if row.get('SITUAÇÃO'):
+            obs.append(f"Situação: {row['SITUAÇÃO']}")
+        return '; '.join(obs)
+
+    df['OBS GERAIS'] = df.apply(obs_gerais, axis=1)
 
     return df
 
-def gerar_vr_com_langchain(consolidated_df: pd.DataFrame, pplx_api_key: str) -> pd.DataFrame:
-    resumo_texto = (
-        "Calcule o Vale Refeição mensal para os colaboradores conforme os dados abaixo:\n"
-        "Considere sindicato, dias úteis, dias de férias, afastamentos, desligamentos, admissões e valor diário por sindicato.\n"
-        "Use as regras de custo: 80% empresa, 20% desconto profissional e proporcionalidade para desligados.\n"
-        "Dados resumidos para contexto (primeiras 20 linhas):"
-    )
-    system_msg = "Você é um assistente especializado em RH e folha de pagamento."
-
-    resumo_dados = consolidated_df.head(20).to_dict(orient='records')
-    user_msg = f"{resumo_texto}\n{resumo_dados}"
-
-    chat = ChatPerplexity(temperature=0, pplx_api_key=pplx_api_key, model="sonar")
-
-    messages = [
-        {"role": "system", "content": system_msg},
-        {"role": "user", "content": user_msg},
-    ]
-
-    resposta = chat.invoke(messages)
-
-    # Aqui pode implementar parser para resposta se desejar
-    df_completo = calcular_vr(consolidated_df)
-    return df_completo
-
 def main():
     st.title("Calculadora Automática de VR Mensal com LangChain e Perplexity")
-    st.sidebar.header("Faça upload dos arquivos Excel necessários")
 
     uploaded_files = st.sidebar.file_uploader(
-        "Selecione os arquivos", accept_multiple_files=True, type=['xlsx', 'xls']
+        "Selecione os arquivos Excel necessários", accept_multiple_files=True,
+        type=['xlsx', 'xls']
     )
-
     if uploaded_files:
-        with st.spinner("Carregando e consolidando bases de dados..."):
+        with st.spinner("Carregando e consolidando bases..."):
             dataframes = carregar_excel_arquivos(uploaded_files)
             consolidated_df = consolidar_bases(dataframes)
-            st.write("### Dados consolidados após limpeza e exclusões:")
+            st.write("## Dados consolidados após limpeza e exclusões")
             st.dataframe(consolidated_df.head())
 
         pplx_api_key = st.sidebar.text_input("Chave API Perplexity", type="password")
 
-        if pplx_api_key and st.button("Gerar VR Mensal com LangChain + Perplexity"):
-            with st.spinner("Consultando LangChain + Perplexity e calculando VR..."):
-                vr_final_df = gerar_vr_com_langchain(consolidated_df, pplx_api_key)
-                st.write("### Planilha final calculada de VR para envio:")
-                st.dataframe(vr_final_df.head())
-
+        if pplx_api_key and st.button("Gerar VR Mensal"):
+            with st.spinner("Processando cálculo do Vale Refeição..."):
+                # Call LangChain here if needed, or skip and just calculate
+                resultado_df = calcular_vr(consolidated_df)
+                st.write("## Planilha final com cálculos de VR")
+                st.dataframe(resultado_df.head())
+                
                 buffer = io.BytesIO()
-                vr_final_df.to_excel(buffer, index=False)
+                resultado_df.to_excel(buffer, index=False)
                 buffer.seek(0)
 
                 st.download_button(
