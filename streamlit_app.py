@@ -3,8 +3,6 @@ import pandas as pd
 import io
 import json
 from langchain_perplexity import ChatPerplexity
-from langchain_core.messages import SystemMessage, HumanMessage
-
 
 def carregar_excel_arquivos(file_buffers):
     dataframes = {}
@@ -13,7 +11,6 @@ def carregar_excel_arquivos(file_buffers):
         df = pd.read_excel(f)
         dataframes[nome] = df
     return dataframes
-
 
 def consolidar_bases(dataframes):
     if 'ATIVOS' not in dataframes:
@@ -96,7 +93,6 @@ def consolidar_bases(dataframes):
 
     return consolidated_df
 
-
 def calcular_vr(df):
     valores_por_estado = {
         'Paraná': 35.0,
@@ -130,9 +126,6 @@ def calcular_vr(df):
 
     return df
 
-
-from langchain_core.messages import SystemMessage, HumanMessage
-
 def gerar_vr_com_langchain(consolidated_df):
     system_msg = "Você é um assistente especializado em RH e folha de pagamento."
     resumo_texto = (
@@ -143,22 +136,21 @@ def gerar_vr_com_langchain(consolidated_df):
     )
     dados = consolidated_df.head(20).to_dict(orient='records')
 
-    # CORREÇÃO: usar objetos de mensagem do LangChain
+    # CORREÇÃO FINAL: lista de dicionários no formato aceito pelo ChatPerplexity
     messages = [
-        SystemMessage(content=system_msg),
-        HumanMessage(content=f"{resumo_texto}\n\nDados: {dados}")
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": f"{resumo_texto}\n\nDados: {dados}"}
     ]
 
     pplx_api_key = st.secrets["PPLX_API_KEY"]
     chat = ChatPerplexity(temperature=0, openai_api_key=pplx_api_key, model="sonar")
 
-    # Passa a lista de objetos diretamente
-    resposta = chat.generate(messages)
+    resposta = chat.generate(messages)  # Lista de dicionários diretamente
 
     st.write("### Resposta bruta do LLM")
     st.write(resposta)
 
-    # Extrai conteúdo corretamente do retorno
+    # Extrai o texto corretamente
     try:
         resposta_texto = resposta.generations[0][0].text
         parsed = json.loads(resposta_texto)
@@ -203,9 +195,4 @@ def main():
                     label="Baixar arquivo Excel VR Mensal",
                     data=buffer,
                     file_name="VR_Mensal_Final.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
-
-
-if __name__ == "__main__":
-    main()
+                    mime="application/vnd.openxmlformats-off
